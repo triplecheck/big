@@ -14,6 +14,13 @@
 package tdf;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import utils.files;
 
 /**
@@ -22,7 +29,9 @@ import utils.files;
  */
 public class ArchiveTDF {
 
+    private int maxFileSize = 1000000 * 100; // max size = 100Mb 
     private Boolean isReady = false;
+    OutputStream outputStream = null;
     
     /**
      * Initialises a TDF archive. If the archive file doesn't exist yet then 
@@ -31,7 +40,6 @@ public class ArchiveTDF {
      * @param file 
      */
     public ArchiveTDF(final File file) {
-        
         // does our archive already exists?
         if(file.exists() == false){
             // then create a new one
@@ -44,6 +52,15 @@ public class ArchiveTDF {
                 return;
             }
         }
+        
+        try {
+            // now open our archive file
+            outputStream = new FileOutputStream(file, true);
+            
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(ArchiveTDF.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
         System.out.println("ATDF47 Archive open: " + file.getName());
         isReady = true;
     }
@@ -66,11 +83,68 @@ public class ArchiveTDF {
             System.err.println("ATDF66 - Error, Archive is not ready");
             return;
         }
-        // call the iteration to go through all files
-        
-        
+       // call the iteration to go through all files
+       addFiles(folderToAdd, 25); 
     }
     
     
+    /**
+     * Find all files in a given folder and respective sub-folders
+     * @param where A file object of the start folder
+     * @param maxDeep How deep is the crawl allowed to proceed
+     * @return An array containing all the found files, returns null if none is
+     * found
+     */
+     private void addFiles(final File where, int maxDeep){
+        // list the files on the current directory 
+        File[] files = where.listFiles();
+        // no need to continue if nothing was found
+        if(files == null){
+            return;
+        }
+        // go through each file
+        for (File file : files) {
+            if (file.isFile()){
+                // Add the file to our archive
+                addFile(file);
+            }
+            else
+                if ( (file.isDirectory())
+                        &&( maxDeep-1 > 0 ) ){
+                    // do the recursive crawling
+                    addFiles(file, maxDeep-1);
+                }
+        }
+     }
     
+     
+    /**
+     * Copies one file into the big archive
+     */ 
+    private void addFile(File fileToCopy){
+    // declare
+        FileInputStream inputStream = null;
+    try {
+        inputStream = new FileInputStream(fileToCopy);
+        byte[] buffer = new byte[8192];
+        int length;
+        while ((length = inputStream.read(buffer)) > 0) {
+            outputStream.write(buffer, 0, length);
+        }
+    } catch(IOException e){
+        System.err.println("ATDF134 - Error copying file: " + fileToCopy.getAbsolutePath());
+        System.exit(1);
+    }
+    
+    finally {
+        if(inputStream != null){
+            try {
+                inputStream.close();
+            } catch (IOException ex) {
+                Logger.getLogger(ArchiveTDF.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+}
+     
 }

@@ -28,7 +28,7 @@ public class start {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        final String testFolderLocation = "/home/nuno/code/source/linux-kernel/";
+        final String testFolderLocation = "/media/nuno/main/core/code/source/linux-kernel/";
         final File testFolder = new File(testFolderLocation);
         
         final String testArchive = "test.tdf";
