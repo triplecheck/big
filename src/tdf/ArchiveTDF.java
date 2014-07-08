@@ -13,10 +13,11 @@
 
 package tdf;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.logging.Level;
@@ -32,6 +33,9 @@ public class ArchiveTDF {
     private int maxFileSize = 1000000 * 100; // max size = 100Mb 
     private Boolean isReady = false;
     OutputStream outputStream = null;
+    BufferedWriter writer = null;
+    
+    long currentPosition = 0;
     
     /**
      * Initialises a TDF archive. If the archive file doesn't exist yet then 
@@ -52,16 +56,37 @@ public class ArchiveTDF {
                 return;
             }
         }
+         // does our index file already exists?
+        File fileIndex = new File(file.getParentFile(), file.getName() + "-index");
+        if(fileIndex.exists() == false){
+            // then create a new one
+            files.touch(fileIndex);
+            // did this worked?
+            if(fileIndex.exists() == false){
+                // we failed to create our file
+                System.err.println("FTDF66 - Error creating empty index archive: "
+                 + fileIndex.getAbsolutePath());
+                return;
+            }
+        }
+        
+        
         
         try {
-            // now open our archive file
+            // open our archive file
             outputStream = new FileOutputStream(file, true);
+            // open the respective index file
+            writer = new BufferedWriter(
+                new FileWriter(fileIndex, true), 8192);
             
-        } catch (FileNotFoundException ex) {
+            // get other variables
+            currentPosition = file.length();
+            
+        } catch (IOException ex) {
             Logger.getLogger(ArchiveTDF.class.getName()).log(Level.SEVERE, null, ex);
         }
         
-        System.out.println("ATDF47 Archive open: " + file.getName());
+        System.out.println("ATDF47 An archive was open: " + file.getName());
         isReady = true;
     }
 
@@ -84,7 +109,7 @@ public class ArchiveTDF {
             return;
         }
        // call the iteration to go through all files
-       addFiles(folderToAdd, 25); 
+       addFiles(folderToAdd, folderToAdd, 25); 
     }
     
     
@@ -95,7 +120,7 @@ public class ArchiveTDF {
      * @return An array containing all the found files, returns null if none is
      * found
      */
-     private void addFiles(final File where, int maxDeep){
+     private void addFiles(final File baseFolder, final File where, int maxDeep){
         // list the files on the current directory 
         File[] files = where.listFiles();
         // no need to continue if nothing was found
@@ -106,13 +131,13 @@ public class ArchiveTDF {
         for (File file : files) {
             if (file.isFile()){
                 // Add the file to our archive
-                addFile(file);
+                addFile(baseFolder, file);
             }
             else
                 if ( (file.isDirectory())
                         &&( maxDeep-1 > 0 ) ){
                     // do the recursive crawling
-                    addFiles(file, maxDeep-1);
+                    addFiles(baseFolder, file, maxDeep-1);
                 }
         }
      }
@@ -121,7 +146,7 @@ public class ArchiveTDF {
     /**
      * Copies one file into the big archive
      */ 
-    private void addFile(File fileToCopy){
+    private void addFile(final File baseFolder, final File fileToCopy){
     // declare
         FileInputStream inputStream = null;
     try {
@@ -131,6 +156,16 @@ public class ArchiveTDF {
         while ((length = inputStream.read(buffer)) > 0) {
             outputStream.write(buffer, 0, length);
         }
+        
+        // calculate the base path
+        final String basePath = baseFolder.getAbsolutePath();
+        final String resultingPath = fileToCopy.getAbsolutePath().replace(basePath, "");
+        
+        // write a new line in our index file
+        writer.write(currentPosition + " " + resultingPath + "\n");
+        // increase the position counter
+        currentPosition += fileToCopy.length();
+        
     } catch(IOException e){
         System.err.println("ATDF134 - Error copying file: " + fileToCopy.getAbsolutePath());
         System.exit(1);
