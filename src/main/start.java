@@ -14,7 +14,7 @@
 package main;
 
 import java.io.File;
-import tdf.ArchiveTDF;
+import big.ArchiveBIG;
 
 /**
  *
@@ -28,15 +28,17 @@ public class start {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        final String testFolderLocation = "/media/nuno/main/core/code/source/linux-kernel/";
+        final String testFolderLocation = "/media/nuno/main/core/code/source/7z922/";
         final File testFolder = new File(testFolderLocation);
         
-        final String testArchive = "test.tdf";
+        final String testArchive = "test.big";
         final File file = new File(testArchive);
         
-        ArchiveTDF folder = new ArchiveTDF(file);
+        ArchiveBIG folder = new ArchiveBIG(file);
         // now add some files
+        System.out.println("Adding files to " + testArchive);
         folder.addFolder(testFolder);
+        System.out.println("Done");
         
     }
 
