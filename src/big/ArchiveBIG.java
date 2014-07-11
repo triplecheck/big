@@ -187,7 +187,7 @@ public class ArchiveBIG {
         String lastLine = utils.files.getLastLine(fileLogBIG);
         // are we detecting that something went wrong?
         if((lastLine.isEmpty() == false) && (lastLine.startsWith("start:"))){
-            System.out.println("BIG188 Something went wrong, need to restore last saved point!");
+            System.out.println("BIG190 Something went wrong last time, we need to restore the last saved point!");
             // we need to restore the last saved point
             final String snippet = lastLine.substring(lastLine.indexOf(" ")+1);
             final String number = snippet.substring(0, snippet.indexOf(" "));
@@ -201,8 +201,9 @@ public class ArchiveBIG {
             }
             // we had success so, time to delete this info from the index
             deleteIndexDataAfterPosition(lastPosition);
-            System.out.println(number + "->" + fileMainBIG.length());
-            System.exit(1);
+            // update our index
+            currentPosition = lastPosition;
+            System.exit(-1);
         }
         // now add a line to record what we are doing
         utils.files.addTextToFile(fileLogBIG, "\n"
@@ -221,18 +222,13 @@ public class ArchiveBIG {
      * all lines that come after that position, effectively deleting them.
      */
     private void deleteIndexDataAfterPosition(final long lastPosition){
-        BufferedReader reader;
-        try {
-            reader = new BufferedReader(new FileReader(fileIndexBIG));
-            String line = "";
-            while (line != null) {
-                line = reader.readLine();
-            }
-            reader.close();
-        } catch (IOException ex) {
-            Logger.getLogger(files.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
+        // prepare the keyword that we want to delete
+        final String prettyNumber = utils.files.getPrettyFileSize(lastPosition);
+        // cut the log file after the mentioned position
+        utils.files.cutTextFileAfter(fileLogBIG, "start: " + prettyNumber);
+        // cut the index file after the mentioned position
+        utils.files.cutTextFileAfter(fileIndexBIG, prettyNumber + " ");
+   }
     
     /**
      * Closes the pointers of our work files

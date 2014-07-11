@@ -604,6 +604,44 @@ public static long folderSize(File where){
     }
     
     /**
+     * Reduces or increases the size of a file as needed
+     * @param file      The file to modify
+     * @param keyword   Cuts a given text file after a given keyword
+     */
+    public static void cutTextFileAfter(final File file, final String keyword){
+      try {
+          // create a random access file object
+          RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
+          // trim the size as specified
+          String line = "";
+          // read all the lines until we reach end of file
+          while(line != null){
+              // Houston, we have got a match
+              if(line.contains(keyword)){
+                  long currentPosition = 
+                          randomAccessFile.getFilePointer() // current position
+                          - line.length()   // remove the size of this line
+                          - 2               // remove the line separator
+                          ;
+                  // now we cut the position of this file
+                  randomAccessFile.setLength(currentPosition);
+                  // all done let's get back.
+                  break;
+              }
+              line = randomAccessFile.readLine();
+          }
+          
+          // close the file to prevent memory leaks 
+          randomAccessFile.close();
+      } catch (FileNotFoundException ex) {
+          Logger.getLogger(files.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (IOException ex) {
+          Logger.getLogger(files.class.getName()).log(Level.SEVERE, null, ex);
+      }
+    }
+    
+    
+    /**
      * On index files we have the need to write the coordinates of a given portion
      * of data within a file large binary files. This method helps to write these
      * coordinates always using the same size. Albeit taking up more disk space
