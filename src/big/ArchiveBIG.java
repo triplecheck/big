@@ -40,11 +40,13 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import utils.files;
@@ -203,7 +205,6 @@ public class ArchiveBIG {
             deleteIndexDataAfterPosition(lastPosition);
             // update our index
             currentPosition = lastPosition;
-            System.exit(-1);
         }
         // now add a line to record what we are doing
         utils.files.addTextToFile(fileLogBIG, "\n"
@@ -339,4 +340,117 @@ public class ArchiveBIG {
     }
 }
      
+    /**
+     * Looks inside our BIG archive to extract a specific file using the
+     * path/name portion
+     * @param fileToExtract The full path and name of the file
+     * @param targetFile    The where we will be writing the result
+     * @return True if we created a new file, false if we didn't found one or
+     * something else went wrong.
+     */
+    public boolean getFile(final String fileToExtract, final File targetFile){
+        // get the line where the file is located on our index
+        long[] coordinates = getFileCoordinates(fileIndexBIG, fileToExtract);
+        // did we found something?
+        if(coordinates == null){
+            return false;
+        }
+        // now extract the mentioned bytes from our BIG archive
+        extractBytes(targetFile, coordinates[0], coordinates[1]);
+        // all done
+        return true;
+    }
+    
+    /**
+     * Given a position inside our knowledge base, retrieve the data up to
+     * the next file indicator.
+     * @param targetFile    The new file that will be created
+     * @param startPosition The position from where we start to read the data
+     */
+    private void extractBytes(final File targetFile, final long startPosition,
+            final Long endPosition){
+        /**
+         * This is a tricky method. We will be extracting data from a the BIG
+         * archive onto a new file somewhere on disk. The biggest challenge here
+         * is to find exactly when the data for the file ends and still do the
+         * file copy with a wonderful performance.
+         */
+        try {
+            // enable random access to the BIG file (fast as heck)
+            RandomAccessFile dataBIG = new RandomAccessFile(fileMainBIG, "r");
+            // if the target file exists, try to delete it
+            if(targetFile.exists()){
+                targetFile.delete();
+            }
+            // create a new file
+            RandomAccessFile dataNew = new RandomAccessFile(targetFile, "rw");
+            // jump directly to the position where the file is positioned
+            dataBIG.seek(startPosition);
+            // now we start reading bytes during the mentioned interval
+            while(dataBIG.getFilePointer() < endPosition){
+                // read a byte from our BIG archive
+                int data = dataBIG.read();
+                // write the same byte on the target file
+                dataNew.write(data);
+            }
+
+            // now close everything
+            dataBIG.close();
+            dataNew.close();
+            
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+        }
+          
+    }
+    
+    /**
+     * Looks inside a text file to discover the line that contains a given
+     * keyword. When the line is discovered then it returns an array where
+     * the first long represents the start of data and the second represents
+     * its end.
+     * @param file      A file on disk
+     * @param keyword   A keyword that must be present on the file
+     * @return          An array with the start and end position of a given
+     * file inside our BIG archive. If we don't have a match, the result is NULL
+     */
+    private long[] getFileCoordinates(final File file, 
+            final String keyword){
+        // what we provide as answer
+        long[] result = null;
+        BufferedReader reader;
+        try {
+            FileReader fileReader = new FileReader(file);
+            reader = new BufferedReader(fileReader);
+            String line = "";
+            while (line != null) {
+                // do we have a match? Yes, let's proceed
+                if(line.endsWith(keyword)){
+                    // an example of what we are reading:
+                    // 000000000180411 3f1f0990b8200b5e9b5de461a7fa7f7640ae16f7 /C/HappyNuno.txt
+                    final String startValue = line.substring(0, 15);
+                    // get the coordinate and ignore the magic signature
+                    final long val1 = Long.parseLong(startValue) + magicSignature.length();
+                    // now read the next line to get the end value
+                    line = reader.readLine();
+                    final String endValue = line.substring(0, 15);
+                    final long val2 = Long.parseLong(endValue);
+                    // deliver the value
+                    result = new long[]{val1, val2};
+                    break;
+                }
+                line = reader.readLine();
+            }
+            fileReader.close();
+            reader.close();
+        } catch (IOException ex) {
+            Logger.getLogger(files.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        // all done    
+        return result;
+    }
+  
+    
 }

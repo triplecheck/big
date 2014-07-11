@@ -561,6 +561,40 @@ public static long folderSize(File where){
         return result;
     }
   
+    
+    /**
+     * Looks inside a text file to discover the line that contains a given
+     * keyword.
+     * @param file      A file on disk
+     * @param keyword   A keyword that must be present on the file
+     * @return          The full line that has the keyword. This method
+     * only returns the first line that was found. If nothing was found, then it
+     * returns empty as result.
+     */
+    public static String getTextLineEndingWithKeyword(final File file, 
+            final String keyword){
+        String result = "";
+        BufferedReader reader;
+        try {
+            FileReader fileReader = new FileReader(file);
+            reader = new BufferedReader(fileReader);
+            String line = "";
+            while (line != null) {
+                if(line.endsWith(keyword)){
+                    result = line;
+                    break;
+                }
+                line = reader.readLine();
+            }
+            fileReader.close();
+            reader.close();
+        } catch (IOException ex) {
+            Logger.getLogger(files.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        // all done    
+        return result;
+    }
+  
     /**
      * Writes a piece of text onto a specific file on disk. If you need
      * to add a line then you'll need to manually specify the "\n" separator.
@@ -581,6 +615,7 @@ public static long folderSize(File where){
           Logger.getLogger(files.class.getName()).log(Level.SEVERE, null, ex);
       }
     }
+    
     
     
     /**

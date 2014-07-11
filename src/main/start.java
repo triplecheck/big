@@ -36,8 +36,13 @@ public class start {
         
         ArchiveBIG folder = new ArchiveBIG(file);
         // now add some files
-        System.out.println("Adding files to " + testArchive);
-        folder.addFolder(testFolder);
+//        System.out.println("Adding files to " + testArchive);
+//        folder.addFolder(testFolder);
+        
+        System.out.println("Extracting file");
+        File test = new File("test.txt");
+        folder.getFile("/C/HappyNuno.txt", test);
+        
         System.out.println("Done");
         
     }
