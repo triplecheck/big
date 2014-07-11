@@ -1,4 +1,4 @@
-/*
+/**
  * SPDXVersion: SPDX-1.1
  * Creator: Person: Nuno Brito (nuno.brito@triplecheck.de)
  * Creator: Organization: TripleCheck (contact@triplecheck.de)
@@ -7,7 +7,30 @@
  * FileName: ArchiveBIG.java  
  * FileType: SOURCE
  * FileCopyrightText: <text> Copyright 2014 Nuno Brito, TripleCheck </text>
- * FileComment: <text> Provides access to a Big Information Gathered archive. </text> 
+ * FileComment: <text>
+ * 
+ * This class provides the methods to add and read files from a BIG archive.
+ * There is a common set of variables that are used for opening the stream of
+ * data globally across the class. This is more efficient than opening the BIG
+ * file every time we need to add something new but at the same time brings more
+ * complexity in ensuring that each related file is ready for operation.
+ * 
+ * The risk of data corruption is very high. One single byte misplaced and the
+ * whole archive is lost. Therefore, we write a line on the log stating that an
+ * operation is in course. When the operation ends then another line on the log
+ * will signal that everything was done with success. It will happen that
+ * some time the process is interrupted before completing. When this is the case
+ * then on the next operation will be noted that existed a pending operation.
+ * The pending operation will be discarded completely to ensure that the archive
+ * remains usable.
+ * 
+ * A second measure to prevent data corruption is the magic signature that also
+ * serves as individual file separator. On one hand it permits other tools to
+ * identify the type of data stored in the archive. On the other hand, if the
+ * index is not available then you lose the path/name information of the files
+ * but the data remains usable.
+ * 
+ * </text> 
  */
 
 
@@ -30,18 +53,20 @@ import utils.files;
  */
 public class ArchiveBIG {
 
-    private int maxFileSize = 1000000 * 100; // max size = 100Mb 
+    private final int maxFileSize = 1000000 * 100; // max size = 100Mb 
     private Boolean isReady = false;
     private OutputStream outputStream = null;
     private BufferedWriter writer = null;
     // the main file associated to this object
     private File 
-            fileTempBIG = null,
+            fileLogBIG = null,
             fileMainBIG = null,
             fileIndexBIG = null;
     
-    
     long currentPosition = 0;
+    
+    // defines the magic number and recovery trigger for each stored file
+    private final String magicSignature = "BIG81nb";
     
     /**
      * Initialises a BIG archive. If the archive file doesn't exist yet then 
@@ -52,14 +77,13 @@ public class ArchiveBIG {
     public ArchiveBIG(final File fileTarget) {
         // do the proper assignments
         this.fileMainBIG = fileTarget;
-        this.fileTempBIG = getNewFile("temp");
+        this.fileLogBIG = getNewFile("log");
         this.fileIndexBIG = getNewFile("index");
                 
         // ensure these files exist        
         existOrTouch(fileMainBIG);
-        existOrTouch(fileTempBIG);
+        existOrTouch(fileLogBIG);
         existOrTouch(fileIndexBIG);
-
         
         System.out.println("ATDF47 Archive is ready to be used: " + fileMainBIG.getName());
         isReady = true;
@@ -87,7 +111,7 @@ public class ArchiveBIG {
             // did this worked?
             if(file.exists() == false){
                 // we failed to create our file
-                System.err.println("FTDF42 - Error creating empty archive: "
+                System.err.println("BIG88 - Error creating file: "
                  + file.getAbsolutePath());
                 return false;
             }
@@ -112,31 +136,35 @@ public class ArchiveBIG {
     public void addFolder(final File folderToAdd) {
         // preflight checks
         if(isReady == false){
-            System.err.println("ATDF66 - Error, Archive is not ready");
+            System.err.println("BIG113 - Error, Archive is not ready");
             return;
         }
         
         // open the index files
-        filesOpen();
+        operationStart();
         // call the iteration to go through all files
         addFiles(folderToAdd, folderToAdd, 25); 
         // now close all the pointers
-        filesClose();
+        operationEnd();
     }
     
     /**
      * Opens the BIG file and respective index
      */
-    private void filesOpen(){
+    private void operationStart(){
       try {
+            // do we have any operation left incomplete?
+          
+          
+          
             // open our archive file
-            outputStream = new FileOutputStream(fileTempBIG, true);
-            // open the respective index file
+            outputStream = new FileOutputStream(fileMainBIG, true);
+            // open the file where we list the data, signatures and positions
             writer = new BufferedWriter(
                 new FileWriter(fileIndexBIG, true), 8192);
             
-            // get other variables
-            currentPosition = fileTempBIG.length();
+            // open the BIG file where the binary data is stored
+            currentPosition = fileMainBIG.length();
             
         } catch (IOException ex) {
             Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
@@ -146,11 +174,13 @@ public class ArchiveBIG {
     /**
      * Closes the pointers of our work files
      */
-    private void filesClose(){
+    private void operationEnd(){
         try {
-            
+            // flush all the remaining data onto the files
             outputStream.flush();
             writer.flush();
+            
+            // close the streams
             outputStream.close();
             writer.close();
             
@@ -200,6 +230,9 @@ public class ArchiveBIG {
         
         byte[] buffer = new byte[8192];
         int length;
+        // add the magic number to this file block
+        outputStream.write(magicSignature.getBytes());
+        // now copy the whole file
         while ((length = inputStream.read(buffer)) > 0) {
             outputStream.write(buffer, 0, length);
         }

@@ -1,5 +1,4 @@
-TDF stands for "TripleCheck Data Format". These files are archives
-built to store millions of files.
+BIG is an archive format that was designed to store millions of files.
 
 The format is quite simple. For each archive, two files are used. One file
 is where we store all the binary files. The second file contains a list of
@@ -19,6 +18,11 @@ What is currently NOT supported:
 - Sorting of files
 - Archive splitting
 - Compression of files to save overall disk space
+
+What is it good for?
+- Simplicity, any tool can read/extract data from a BIG archive
+- Millions of files stored inside an archive
+- SHA1 signatures for quick finding specific files
 
 
 License
