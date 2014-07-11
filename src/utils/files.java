@@ -5,6 +5,7 @@
 package utils;
 
 import java.io.*;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -533,48 +534,89 @@ public static long folderSize(File where){
       return buffer.toString();
   }
 
-
+    /**
+     * Returns the last line from a given text file
+     * @param file  A file on disk 
+     * @return The last line if available or an empty string if nothing
+     * was found
+     */
+    public static String getLastLine(final File file){
+        String result = "";
+        BufferedReader reader;
+        try {
+            reader = new BufferedReader(new FileReader(file));
+            String line = "";
+            while (line != null) {
+                line = reader.readLine();
+                if(line != null){
+                    result = line;
+                }
+                // we don't care about the content, just move to the last line
+            }
+            reader.close();
+        } catch (IOException ex) {
+            Logger.getLogger(files.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        // all done    
+        return result;
+    }
   
-//  /**
-//   * Copies a file from one location to another
-//   * @param FromFile Source file
-//   * @param ToFile Place where we want the new file to be copied
-//   * @return 
-//   */
-//  static public Boolean copyFile(File FromFile, File ToFile){
-//      Boolean result = false;
-//      
-//      // do a quick test, if the file is already there then don't overwrite
-//      if(ToFile.exists() && (FromFile.length() == ToFile.length())){
-//          // speed up our proceess.
-//          return true;
-//      }
-//      
-//        try {
-//            // using Apache commons IO for added performance
-//            FileUtils.copyFile(FromFile, ToFile, true);
-//            result = ToFile.exists();
-//        } catch (IOException ex) {
-//        }
-//      return result;
-//  }
-// 
-//    /**
-//   * Copies a file from one location to another
-//   * @param FromFile Source file
-//   * @param ToFile Place where we want the new file to be copied
-//   * @return 
-//   */
-//  static public Boolean copyFolder(File FromFolder, File ToFolder){
-//      Boolean result = true;
-//        try {
-//            // using Apache commons IO for added performance
-//            FileUtils.copyDirectory(FromFolder, ToFolder, true);
-//        } catch (IOException ex) {
-//            result = false;
-//        }
-//      return result;
-//  }
-  
-  
+    /**
+     * Writes a piece of text onto a specific file on disk. If you need
+     * to add a line then you'll need to manually specify the "\n" separator.
+     * @param file  The file that we want to write
+     * @param text  The text that will be written
+     */
+    public static void addTextToFile(final File file, final String text){
+      try {
+          // the object that will write our file
+          BufferedWriter writer = new BufferedWriter(
+                  new FileWriter(file, true), 8192);
+          // write the expected text
+          writer.write(text);
+          // now close things up
+          writer.flush();
+          writer.close();
+      } catch (IOException ex) {
+          Logger.getLogger(files.class.getName()).log(Level.SEVERE, null, ex);
+      }
+    }
+    
+    
+    /**
+     * Reduces or increases the size of a file as needed
+     * @param file      The file to modify
+     * @param newSize   The new size to be defined
+     */
+    public static void changeSize(final File file, final long newSize){
+      try {
+          // create a random access file object
+          RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
+          // trim the size as specified
+          randomAccessFile.setLength(newSize);
+          // close the file to prevent memory leaks 
+          randomAccessFile.close();
+      } catch (FileNotFoundException ex) {
+          Logger.getLogger(files.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (IOException ex) {
+          Logger.getLogger(files.class.getName()).log(Level.SEVERE, null, ex);
+      }
+    }
+    
+    /**
+     * On index files we have the need to write the coordinates of a given portion
+     * of data within a file large binary files. This method helps to write these
+     * coordinates always using the same size. Albeit taking up more disk space
+     * due to the zeros not used, this speeds up processing considerably because
+     * we don't have discover how big (or small) the coordinates are since they
+     * have a fixed position to be written. On the current scheme we can index
+     * up to 999 Terabytes worth of information per file.
+     * @param value
+     * @return 
+     */
+    public static String getPrettyFileSize(final long value){
+        DecimalFormat formatted = new DecimalFormat("000000000000000");
+        return formatted.format(value);
+    }
+    
 }

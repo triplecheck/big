@@ -36,16 +36,19 @@
 
 package big;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import utils.files;
+import utils.header;
 
 /**
  *
@@ -81,11 +84,11 @@ public class ArchiveBIG {
         this.fileIndexBIG = getNewFile("index");
                 
         // ensure these files exist        
-        existOrTouch(fileMainBIG);
-        existOrTouch(fileLogBIG);
-        existOrTouch(fileIndexBIG);
+        existOrTouch(fileMainBIG, "");
+        existOrTouch(fileLogBIG, "log");
+        existOrTouch(fileIndexBIG, "index");
         
-        System.out.println("ATDF47 Archive is ready to be used: " + fileMainBIG.getName());
+        System.out.println("BIG88 Archive is ready to be used: " + fileMainBIG.getName());
         isReady = true;
     }
 
@@ -103,11 +106,17 @@ public class ArchiveBIG {
      * @param file  the file to create
      * @return      true if it exists or was created, false if we fail to create one
      */
-    private boolean existOrTouch(final File file){
+    private boolean existOrTouch(final File file, final String designation){
         // does our archive already exists?
         if(file.exists() == false){
             // then create a new one
-            files.touch(file);
+            if(designation.isEmpty()){
+                files.touch(file);
+            }else{
+                utils.files.SaveStringToFile(file, header.create(magicSignature
+                    + "-" + designation
+                    , "TripleCheck at http://github.com/triplecheck"));
+            }
             // did this worked?
             if(file.exists() == false){
                 // we failed to create our file
@@ -118,8 +127,6 @@ public class ArchiveBIG {
         }
         return true;
     }
-    
- 
     
     /**
      * Is this object initialised and ready to be used?
@@ -136,12 +143,12 @@ public class ArchiveBIG {
     public void addFolder(final File folderToAdd) {
         // preflight checks
         if(isReady == false){
-            System.err.println("BIG113 - Error, Archive is not ready");
+            System.err.println("BIG137 - Error, Archive is not ready");
             return;
         }
         
         // open the index files
-        operationStart();
+        operationStart(folderToAdd);
         // call the iteration to go through all files
         addFiles(folderToAdd, folderToAdd, 25); 
         // now close all the pointers
@@ -151,23 +158,79 @@ public class ArchiveBIG {
     /**
      * Opens the BIG file and respective index
      */
-    private void operationStart(){
+    private void operationStart(final File folderToAdd){
       try {
+            // open the BIG file where the binary data is stored
+            currentPosition = fileMainBIG.length();
             // do we have any operation left incomplete?
-          
-          
-          
+            pointRestoreAndSave(folderToAdd);
             // open our archive file
             outputStream = new FileOutputStream(fileMainBIG, true);
             // open the file where we list the data, signatures and positions
             writer = new BufferedWriter(
                 new FileWriter(fileIndexBIG, true), 8192);
             
-            // open the BIG file where the binary data is stored
-            currentPosition = fileMainBIG.length();
             
         } catch (IOException ex) {
             Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    /**
+     * Checks if we have a restore point that hasn't terminated with success
+     * on a previous operation. If something went wrong on the previous run,
+     * we will try to clean up things now. Results without success are discarded
+     * from the BIG archive.
+     */
+    private void pointRestoreAndSave(final File folderToAdd){
+        // get the last line from our log text file
+        String lastLine = utils.files.getLastLine(fileLogBIG);
+        // are we detecting that something went wrong?
+        if((lastLine.isEmpty() == false) && (lastLine.startsWith("start:"))){
+            System.out.println("BIG188 Something went wrong, need to restore last saved point!");
+            // we need to restore the last saved point
+            final String snippet = lastLine.substring(lastLine.indexOf(" ")+1);
+            final String number = snippet.substring(0, snippet.indexOf(" "));
+            long lastPosition = Long.parseLong(number);
+            
+            // try to return our knowledge base to the previous state
+            utils.files.changeSize(fileMainBIG, lastPosition);
+            if(lastPosition != fileMainBIG.length()){
+                System.out.println("BIG197 - Failed to restore last saved point");
+                System.exit(-1);
+            }
+            // we had success so, time to delete this info from the index
+            deleteIndexDataAfterPosition(lastPosition);
+            System.out.println(number + "->" + fileMainBIG.length());
+            System.exit(1);
+        }
+        // now add a line to record what we are doing
+        utils.files.addTextToFile(fileLogBIG, "\n"
+                + "start: "
+                + utils.files.getPrettyFileSize(currentPosition) 
+                + " "
+                + utils.time.getDateTimeISO()
+                + " -> "
+                + folderToAdd.getAbsolutePath()
+        );
+    }
+    
+    /**
+     * Looks at the data inside the index file, when we reach a file that
+     * is bigger than the value specified as last position then we delete
+     * all lines that come after that position, effectively deleting them.
+     */
+    private void deleteIndexDataAfterPosition(final long lastPosition){
+        BufferedReader reader;
+        try {
+            reader = new BufferedReader(new FileReader(fileIndexBIG));
+            String line = "";
+            while (line != null) {
+                line = reader.readLine();
+            }
+            reader.close();
+        } catch (IOException ex) {
+            Logger.getLogger(files.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
@@ -183,6 +246,15 @@ public class ArchiveBIG {
             // close the streams
             outputStream.close();
             writer.close();
+            
+            
+             // now add a line to record what we are doing
+            utils.files.addTextToFile(fileLogBIG, "\n"
+                + "ended: "
+                + utils.files.getPrettyFileSize(currentPosition) 
+                + " "
+                + utils.time.getDateTimeISO()
+            );
             
         } catch (IOException ex) {
             Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
@@ -236,6 +308,8 @@ public class ArchiveBIG {
         while ((length = inputStream.read(buffer)) > 0) {
             outputStream.write(buffer, 0, length);
         }
+        // if there is something else to be flushed, do it now
+        outputStream.flush();
         
         // calculate the base path
         final String basePath = baseFolder.getAbsolutePath();
@@ -245,11 +319,13 @@ public class ArchiveBIG {
         final String output = utils.thirdparty.Checksum.generateFileChecksum("SHA-1", fileToCopy);
         
         // write a new line in our index file
-        writer.write(currentPosition + " "
+        writer.write("\n" 
+                + utils.files.getPrettyFileSize(currentPosition)
+                + " "
                 + output
-                + " " + resultingPath + "\n");
+                + " " + resultingPath);
         // increase the position counter
-        currentPosition += fileToCopy.length();
+        currentPosition += fileToCopy.length() + magicSignature.length();
         
     } catch(IOException e){
         System.err.println("ATDF134 - Error copying file: " + fileToCopy.getAbsolutePath());
