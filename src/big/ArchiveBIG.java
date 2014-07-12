@@ -309,22 +309,20 @@ public class ArchiveBIG {
 
         // compress the file
         zip.compress(fileToCopy, fileZip);
-        
+        // use the zip file as inputstream
         inputStream = new FileInputStream(fileZip);
         
         byte[] buffer = new byte[8192];
         int length;
         // add the magic number to this file block
         outputStream.write(magicSignature.getBytes());
-        // now copy the whole file
+        // now copy the whole file into the BIG archive
         while ((length = inputStream.read(buffer)) > 0) {
             outputStream.write(buffer, 0, length);
         }
         // if there is something else to be flushed, do it now
         outputStream.flush();
         
-        // delete the zip file, we don't need it anymore
-        fileZip.delete();
         
         // calculate the base path
         final String basePath = baseFolder.getAbsolutePath();
@@ -338,9 +336,15 @@ public class ArchiveBIG {
                 + utils.files.getPrettyFileSize(currentPosition)
                 + " "
                 + output
-                + " " + resultingPath);
+                + " " 
+                + resultingPath
+        );
         // increase the position counter
-        currentPosition += fileToCopy.length() + magicSignature.length();
+        currentPosition += fileZip.length() + magicSignature.length();
+        
+        // delete the zip file, we don't need it anymore
+        fileZip.delete();
+        
         
     } catch(IOException e){
         System.err.println("BIG346 - Error copying file: " + fileToCopy.getAbsolutePath());
@@ -400,9 +404,26 @@ public class ArchiveBIG {
             // if the target file exists, try to delete it
             if(targetFile.exists()){
                 targetFile.delete();
+                if(targetFile.exists()){
+                    // we failed completely
+                    System.out.println("BIG405 - Failed to delete: " + targetFile.getAbsolutePath());
+                    return false;
+                }
             }
+            // we need to create a temporary zip file holder
+            File fileZip = new File("temp.zip");
+            // delete the zip file if it already exists
+            if(fileZip.exists()){
+                fileZip.delete();
+                if(fileZip.exists()){
+                    // we failed completely
+                    System.out.println("BIG416 - Failed to delete: " + fileZip.getAbsolutePath());
+                    return false;
+                }
+            }
+            
             // create a new file
-            RandomAccessFile dataNew = new RandomAccessFile(targetFile, "rw");
+            RandomAccessFile dataNew = new RandomAccessFile(fileZip, "rw");
             // jump directly to the position where the file is positioned
             dataBIG.seek(startPosition);
             // now we start reading bytes during the mentioned interval
@@ -413,9 +434,15 @@ public class ArchiveBIG {
                 dataNew.write(data);
             }
 
-            // now close everything
+            // close the file streams
             dataBIG.close();
             dataNew.close();
+            
+            // extract the file
+            zip.extract(fileZip, new File("."));
+            // delete the temp zip file
+            fileZip.delete();
+            
             
         } catch (FileNotFoundException ex) {
             Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);

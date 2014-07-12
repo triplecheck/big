@@ -28,26 +28,36 @@ public class start {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        final String testFolderLocation = "/media/nuno/main/core/code/source/7z922/";
-        final File testFolder = new File(testFolderLocation);
         
         final String testArchive = "test.big";
         final File file = new File(testArchive);
         
-        ArchiveBIG folder = new ArchiveBIG(file);
-        // now add some files
-        System.out.println("Adding files to " + testArchive);
-        folder.addFolder(testFolder);
-        
-//        System.out.println("Extracting file");
-//        File test = new File("test.txt");
-//        folder.getFile("/C/HappyNuno.txt", test);
-        
-        System.out.println("Done");
+//        testAddFiles(file);
+        testExtract(file);
         
     }
 
+    static void testAddFiles(File file){
+        final String testFolderLocation = "/media/nuno/main/core/code/source/7z922/";
+        final File testFolder = new File(testFolderLocation);
+        
+        
+        ArchiveBIG folder = new ArchiveBIG(file);
+        // now add some files
+        System.out.println("Adding files to " + file.getName());
+        folder.addFolder(testFolder);
+    }
+
+        
     
+    static void testExtract(File file){
+        ArchiveBIG folder = new ArchiveBIG(file);
+        File test = new File("test.txt");
+        System.out.println("Extracting file");
+        folder.getFile("/C/HappyNuno.txt", test);
+        System.out.println("Done");
+    
+    }
    
     
 }

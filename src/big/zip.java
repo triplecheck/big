@@ -38,10 +38,12 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.compress.archivers.ArchiveException;
+import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
@@ -108,54 +110,44 @@ public class zip {
             Logger.getLogger(zip.class.getName()).log(Level.SEVERE, null, ex);
             return false;
         } 
-        
      return true;
     }
  
+   
     /**
-     * Pick a file on disk, compress it using the ZIP algorithm and write the
-     * results directly at another file that was already open for writing.
-     * @param fileToCompress    The file to compress
-     * @param outputStream      The file stream that was already open 
-     * @param inputStream 
-     * @return  True if the compressed file was written in the target file,
-     * false if something went wrong
+     * When given a zip file, this method will open it up and extract all files
+     * inside into a specific folder on disk. Typically on BIG archives, the zip
+     * file only contains a single file with the original file name.
+     * @param fileZip           The zip file that we want to extract files from
+     * @param folderToExtract   The folder where the extract file will be placed 
+     * @return True if no problems occurred, false otherwise
      */
-    public static boolean compress(final File fileToCompress, 
-            OutputStream outputStream, FileInputStream inputStream){
-        // does our file to compress exist?
-        if(fileToCompress.exists() == false){
-            // we have a problem here
-            System.out.println("ZIP66 - Didn't found the file to compress: "
-            + fileToCompress.getAbsolutePath());
+    public static boolean extract(final File fileZip, final File folderToExtract){
+        // preflight check
+        if(fileZip.exists() == false){
+            System.out.println("ZIP126 - Zip file not found: " + fileZip.getAbsolutePath());
             return false;
         }
-        // all checks are done, now it is time to do the compressing
-        try{
-            ArchiveOutputStream archive = new ArchiveStreamFactory()
-                .createArchiveOutputStream("zip", outputStream);
-//            archive.putArchiveEntry(new ZipArchiveEntry(fileToCompress.getName()));
-//            // create the input file stream and copy it over to the archive
-//            IOUtils.copy(inputStream, archive);
-//            // close the archive
-//            archive.closeArchiveEntry();
-//            archive.flush();
-            archive.close();
-            // and flush the output file stream but keep it open for other usage
-            outputStream.flush();
-       
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(zip.class.getName()).log(Level.SEVERE, null, ex);
-            return false;
+        // now proceed to extract the files
+        try {
+        final InputStream inputStream = new FileInputStream(fileZip);
+        final ArchiveInputStream ArchiveStream;
+            ArchiveStream = new ArchiveStreamFactory().createArchiveInputStream("zip", inputStream);
+        final ZipArchiveEntry entry = (ZipArchiveEntry)ArchiveStream.getNextEntry();
+        final OutputStream outputStream = new FileOutputStream(new File(folderToExtract, entry.getName()));
+        IOUtils.copy(ArchiveStream, outputStream);
+        
+        // flush and close all files
+        outputStream.flush();
+        outputStream.close();
+        ArchiveStream.close();
+        inputStream.close();
         } catch (ArchiveException ex) {
             Logger.getLogger(zip.class.getName()).log(Level.SEVERE, null, ex);
-            return false;
         } catch (IOException ex) {
             Logger.getLogger(zip.class.getName()).log(Level.SEVERE, null, ex);
-            return false;
-        } 
-        
-     return true;
+        }
+        return true;
     }
     
     
@@ -170,7 +162,8 @@ public class zip {
     public static void main(String[] args) throws IOException, ArchiveException {
          File file1 = new File("test.big");
          File file2 = new File("test.zip");
-         compress(file1, file2);
+         //compress(file1, file2);
+         extract(file2, new File("."));
      }
    
     
