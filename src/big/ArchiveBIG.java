@@ -291,11 +291,26 @@ public class ArchiveBIG {
     /**
      * Copies one file into the big archive
      */ 
-    private void addFile(final File baseFolder, final File fileToCopy){
+    private boolean addFile(final File baseFolder, final File fileToCopy){
     // declare
         FileInputStream inputStream = null;
     try {
-        inputStream = new FileInputStream(fileToCopy);
+        // create the place holder for the zip file
+        File fileZip = new File("temp.zip");
+        // this file can't exist
+        if(fileZip.exists()){
+            fileZip.delete();
+            // this file really can't exist
+            if(fileZip.exists()){
+                System.out.println("BIG305 - Failed to delete " + fileZip.getName());
+                return false;
+            }
+        }
+
+        // compress the file
+        zip.compress(fileToCopy, fileZip);
+        
+        inputStream = new FileInputStream(fileZip);
         
         byte[] buffer = new byte[8192];
         int length;
@@ -307,6 +322,9 @@ public class ArchiveBIG {
         }
         // if there is something else to be flushed, do it now
         outputStream.flush();
+        
+        // delete the zip file, we don't need it anymore
+        fileZip.delete();
         
         // calculate the base path
         final String basePath = baseFolder.getAbsolutePath();
@@ -325,8 +343,8 @@ public class ArchiveBIG {
         currentPosition += fileToCopy.length() + magicSignature.length();
         
     } catch(IOException e){
-        System.err.println("ATDF134 - Error copying file: " + fileToCopy.getAbsolutePath());
-        System.exit(1);
+        System.err.println("BIG346 - Error copying file: " + fileToCopy.getAbsolutePath());
+        return false;
     }  
     
     finally {
@@ -338,6 +356,7 @@ public class ArchiveBIG {
             }
         }
     }
+    return true;
 }
      
     /**
@@ -356,9 +375,9 @@ public class ArchiveBIG {
             return false;
         }
         // now extract the mentioned bytes from our BIG archive
-        extractBytes(targetFile, coordinates[0], coordinates[1]);
+        boolean result = extractBytes(targetFile, coordinates[0], coordinates[1]);
         // all done
-        return true;
+        return result;
     }
     
     /**
@@ -367,7 +386,7 @@ public class ArchiveBIG {
      * @param targetFile    The new file that will be created
      * @param startPosition The position from where we start to read the data
      */
-    private void extractBytes(final File targetFile, final long startPosition,
+    private boolean extractBytes(final File targetFile, final long startPosition,
             final Long endPosition){
         /**
          * This is a tricky method. We will be extracting data from a the BIG
@@ -400,10 +419,13 @@ public class ArchiveBIG {
             
         } catch (FileNotFoundException ex) {
             Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
         } catch (IOException ex) {
             Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
         }
           
+        return true;
     }
     
     /**

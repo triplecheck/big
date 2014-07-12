@@ -1,0 +1,44 @@
+              Apache Apache Commons Compress 1.8.1 RELEASE NOTES
+
+Apache Commons Compress software defines an API for working with
+compression and archive formats.  These include: bzip2, gzip, pack200,
+lzma, xz, Snappy, traditional Unix Compress and ar, cpio, jar, tar,
+zip, dump, 7z, arj.
+
+Release 1.8.1
+
+Changes in this version include:
+
+New features:
+o COMPRESS-272:  CompressorStreamFactory can now auto-detect Unix compress
+                 (".Z") streams. 
+
+Fixed Bugs:
+o COMPRESS-270:  The snappy, ar and tar inputstreams might fail to read from a
+                 non-buffered stream in certain cases. 
+o COMPRESS-277:  IOUtils#skip might skip fewer bytes than requested even though
+                 more could be read from the stream. 
+o COMPRESS-276:  ArchiveStreams now validate there is a current entry before
+                 rreading or writing entry data. 
+o ArjArchiveInputStream#canReadEntryData tested the current
+                 entry of the stream rather than its argument. 
+o COMPRESS-274:  ChangeSet#delete and deleteDir now properly deal with unnamed
+                 entries. 
+o COMPRESS-273:  Added a few null checks to improve robustness. 
+o COMPRESS-278:  TarArchiveInputStream failed to read archives with empty
+                 gid/uid fields. 
+o COMPRESS-279:  TarArchiveInputStream now again throws an exception when it
+                 encounters a truncated archive while reading from the last
+                 entry. 
+o COMPRESS-280:  Adapted TarArchiveInputStream#skip to the modified
+                 IOUtils#skip method. Thanks to BELUGA BEHR. 
+
+Changes:
+o The dependency on org.tukaani:xz is now marked as optional. 
+
+ 
+For complete information on Apache Commons Compress, including instructions
+on how to submit bug reports, patches, or suggestions for improvement,
+see the Apache Commons Compress website:
+
+http://commons.apache.org/compress/
