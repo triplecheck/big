@@ -492,14 +492,25 @@ public static long folderSize(File where){
      * This method saves the contents from a string to a file
      *
      * @author Nuno Brito
-     * @version 1.0
+     * @version 1.1
+     * @param inputFile     The file that we want to write
+     * @param inputString   The string that will be written to the file
+     * @return              True if operation has success, False otherwise
      * @date 2010/06/06
+     * @modified 2014-07-11
     */
-   public static boolean SaveStringToFile(File inputFile, String inputString){
+   public static boolean SaveStringToFile(final File inputFile, 
+           final String inputString){
         try {
-            BufferedWriter out = new BufferedWriter(new FileWriter(inputFile));
+            FileWriter fileWriter = new FileWriter(inputFile);
+            BufferedWriter out = new BufferedWriter(fileWriter);
             out.write(inputString);
+            
+            // now close everything
+            fileWriter.flush();
+            out.flush();
             out.close();
+            fileWriter.close();
             }
             catch (IOException e){
                 System.out.println(e.getMessage());
