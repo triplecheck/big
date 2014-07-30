@@ -38,6 +38,8 @@ package big;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -49,6 +51,11 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.compress.archivers.ArchiveException;
+import org.apache.commons.compress.archivers.ArchiveInputStream;
+import org.apache.commons.compress.archivers.ArchiveStreamFactory;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.utils.IOUtils;
 import utils.files;
 import utils.header;
 
@@ -68,18 +75,53 @@ public class ArchiveBIG {
             fileMainBIG = null,
             fileIndexBIG = null;
     
-    long currentPosition = 0;
+    private long 
+            currentPosition = 0,
+            getNextFileCounter = 0;
     
     // defines the magic number and recovery trigger for each stored file
     private final String magicSignature = "BIG81nb";
     
-    /**
+    private String basePath = "";
+    
+    // variables used during the "next file" iterator
+    private BufferedReader readerNextFile;
+    private FileReader fileReaderNext;
+    private long currentGetNextPosition = 0;
+    private String 
+            readerNextFileName,
+            lastReadLine,
+            currentLine;
+    
+      /**
      * Initialises a BIG archive. If the archive file doesn't exist yet then 
      * it will be created. You should check the isReady() method to verify
      * that the archive is ready to be used.
      * @param fileTarget    the file that we want to open 
      */
     public ArchiveBIG(final File fileTarget) {
+        Start(fileTarget, false);
+    }
+  
+    /**
+     * Initialises a BIG archive. If the archive file doesn't exist yet then 
+     * it will be created. You should check the isReady() method to verify
+     * that the archive is ready to be used.
+     * @param fileTarget    the file that we want to open 
+     * @param silent        No initialisation messages are output
+     */
+    public ArchiveBIG(final File fileTarget, boolean silent) {
+        Start(fileTarget, silent);
+    }
+    
+    /**
+     * Initialises a BIG archive. If the archive file doesn't exist yet then 
+     * it will be created. You should check the isReady() method to verify
+     * that the archive is ready to be used.
+     * @param fileTarget    the file that we want to open 
+     * @param silent        No initialisation messages are output
+     */
+    private void Start(final File fileTarget, boolean silent) {
         // do the proper assignments
         this.fileMainBIG = fileTarget;
         this.fileLogBIG = getNewFile("log");
@@ -90,7 +132,22 @@ public class ArchiveBIG {
         existOrTouch(fileLogBIG, "log");
         existOrTouch(fileIndexBIG, "index");
         
-        System.out.println("BIG88 Archive is ready to be used: " + fileMainBIG.getName());
+        // prepare the initial message
+        String message = "Archive is ready to be used: " 
+                + fileMainBIG.getName();
+        
+        // shall we add the file size if above a given value?
+        if(fileMainBIG.length() > 0){
+            // add the size then
+            message += " ("
+                    + utils.files.humanReadableSize(fileMainBIG.length())
+                    + ")";
+        }
+        // output the message
+        if(silent == false){
+            System.out.println(message);
+        }
+        // alld done
         isReady = true;
     }
 
@@ -109,6 +166,20 @@ public class ArchiveBIG {
      * @return      true if it exists or was created, false if we fail to create one
      */
     private boolean existOrTouch(final File file, final String designation){
+        // first check for the folder
+        File folder = file.getParentFile();
+        // do we have a folder defined?
+        if(folder == null){
+            folder = new File(".");
+        }
+        
+        // does it exist?
+        if(folder.exists() == false){
+            // then create one
+            utils.files.mkdirs(folder);
+        }
+
+
         // does our archive already exists?
         if(file.exists() == false){
             // then create a new one
@@ -148,7 +219,6 @@ public class ArchiveBIG {
             System.err.println("BIG137 - Error, Archive is not ready");
             return;
         }
-        
         // open the index files
         operationStart(folderToAdd);
         // call the iteration to go through all files
@@ -162,6 +232,11 @@ public class ArchiveBIG {
      */
     private void operationStart(final File folderToAdd){
       try {
+            // if the base path is already set, don't change it
+            if(basePath.isEmpty()){
+                basePath = folderToAdd.getAbsolutePath();
+            }
+          
             // open the BIG file where the binary data is stored
             currentPosition = fileMainBIG.length();
             // do we have any operation left incomplete?
@@ -171,7 +246,6 @@ public class ArchiveBIG {
             // open the file where we list the data, signatures and positions
             writer = new BufferedWriter(
                 new FileWriter(fileIndexBIG, true), 8192);
-            
             
         } catch (IOException ex) {
             Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
@@ -325,7 +399,6 @@ public class ArchiveBIG {
         
         
         // calculate the base path
-        final String basePath = baseFolder.getAbsolutePath();
         final String resultingPath = fileToCopy.getAbsolutePath().replace(basePath, "");
         
         // calculate the SHA1 signature
@@ -362,7 +435,16 @@ public class ArchiveBIG {
     }
     return true;
 }
-     
+
+    /**
+     * Define basePath, this is useful for cases where we want to index
+     * files with several sublevels of folders to preserve URL information.
+     * @param basePath 
+     */
+    public void setBasePath(String basePath) {
+        this.basePath = basePath;
+    }
+    
     /**
      * Looks inside our BIG archive to extract a specific file using the
      * path/name portion
@@ -455,6 +537,70 @@ public class ArchiveBIG {
         return true;
     }
     
+    
+    /**
+     * Version 2 that permits to extract the text from a compressed file without
+     * creating any file on the disk.
+     * @param startPosition Offset where the file begins
+     * @param endPosition   Offset where the file ends
+     * @return      The source code of the compressed file
+     */
+    private String extractBytes(final long startPosition, final Long endPosition){
+        
+        String result = null;
+        
+        try {
+            // enable random access to the BIG file (fast as heck)
+            RandomAccessFile dataBIG = new RandomAccessFile(fileMainBIG, "r");
+            // jump directly to the position where the file is positioned
+            dataBIG.seek(startPosition);
+            // create a byte array
+            ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
+
+            //= new ByteArrayInputStream();
+            // now we start reading bytes during the mentioned interval
+            while(dataBIG.getFilePointer() < endPosition){
+                // read a byte from our BIG archive
+                int data = dataBIG.read();
+                byteOutput.write(data);
+            }
+            // flush data at this point
+            byteOutput.flush();
+            // now convert the stream from input into an output (to feed the zip stream)
+            ByteArrayInputStream byteInput = new ByteArrayInputStream(byteOutput.toByteArray());
+            // where we place the decompressed bytes
+            ByteArrayOutputStream textOutput = new ByteArrayOutputStream();
+            // create the zip streamer
+            final ArchiveInputStream archiveStream;
+            archiveStream = new ArchiveStreamFactory().createArchiveInputStream("zip", byteInput);
+            final ZipArchiveEntry entry = (ZipArchiveEntry) archiveStream.getNextEntry();
+            // copy all bytes from one location to the other (and decompress the data)
+            IOUtils.copy(archiveStream, textOutput);
+            // flush the results
+            textOutput.flush();
+            // we've got the result right here!
+            result = textOutput.toString();
+            // now close all the streams that we have open
+            dataBIG.close();
+            byteOutput.close();
+            byteInput.close();
+            textOutput.close();
+            archiveStream.close();
+            
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            return null;
+        } catch (IOException ex) {
+            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            return null;
+        } catch (ArchiveException ex) {
+            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+        }
+          
+        return result;
+    }
+    
+    
     /**
      * Looks inside a text file to discover the line that contains a given
      * keyword. When the line is discovered then it returns an array where
@@ -480,7 +626,7 @@ public class ArchiveBIG {
                     // an example of what we are reading:
                     // 000000000180411 3f1f0990b8200b5e9b5de461a7fa7f7640ae16f7 /C/HappyNuno.txt
                     final String startValue = line.substring(0, 15);
-                    // get the coordinate and ignore the magic signature
+                    // get the coordinate and ignore the magic signature size to get the raw binary contents
                     final long val1 = Long.parseLong(startValue) + magicSignature.length();
                     // now read the next line to get the end value
                     line = reader.readLine();
@@ -500,6 +646,217 @@ public class ArchiveBIG {
         // all done    
         return result;
     }
-  
+
+    /**
+     * Given a specific SHA1 signature, go through the BIG archive and
+     * file the files that have a matching value. This method will search
+     * across the whole knowledge base. If more than one match is found, it will
+     * be included on the list.
+     * @param idSHA1    The SHA1 identifier to find
+     * @return          A list of files found with this SHA1
+     */
+    public String findFilesWithSpecificSHA1(final String idSHA1){
+        // prepare the variable where we place the results
+        String result = "";
+        
+        // open the file for reading
+        getNextFileInitiate();
+        
+        String line;
+        try {
+            while( (line = readerNextFile.readLine()) !=  null){ 
+            
+                // get the SHA1 signature
+                final String SHA1 = line.substring(16, 56);
+                
+                // no need to continue if no match exists
+                if(utils.text.equals(SHA1, idSHA1)==false){
+                    continue;
+                }
+
+                // ge the file name details after coordinate 57
+                final String fileName = line.substring(57);
+                // add this data to our list
+                result = result.concat(fileName.concat("\n"));
+//                System.out.println(
+//                        SHA1 + "->" + 
+//                        fileName);
+                
+                // get the partial signature of the SHA1
+//                final String partialSHA1 = line.substring(16, size2);
+//                
+//                //if(utils.text.equals(SHA1, idSHA1)){
+//                if(utils.text.equals(partialIdSHA1, partialSHA1)){
+//                // get the SHA1 signature
+//                final String SHA1 = line.substring(16, 56);
+//                
+//                    if(utils.text.equals(SHA1, idSHA1)==false){
+//                        continue;
+//                    }
+//                
+//                    // yes, we got a match 
+//                    final String fileName = line.substring(57);
+//                    // add it to our list
+//                    result = result.concat(fileName.concat("\n"));
+//                    System.out.println(
+//                            SHA1 + "->" + 
+//                            fileName);
+//                }
+            }
+            
+        } catch (IOException ex) {
+            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            // close the files for reading
+            getNextFileConclude();    
+        }
+        //System.out.println("BIG662 SHA1 search concluded");
+        // all done
+       return result;
+    }
+    
+    /**
+     * Prepares this archive to iterate all files sequentially
+     */
+    public void getNextFileInitiate(){
+        // we start by initiating the file readers
+        try {
+            fileReaderNext = new FileReader(fileIndexBIG);
+            readerNextFile = new BufferedReader(fileReaderNext);
+            // avoid the header line
+            readerNextFile.readLine();
+            // now avoid the first file because we know its offset is 0000
+            lastReadLine = readerNextFile.readLine();
+            readerNextFileName = getFileNameOutOfLine(lastReadLine);
+            
+            } catch (FileNotFoundException ex) {
+            Logger.getLogger(files.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    /**
+     * Releases the allocated resources required for running this operation
+     */
+    public void getNextFileConclude(){
+        // closes the streams previously open
+        try {
+            if(fileReaderNext != null)
+                fileReaderNext.close();
+            if(readerNextFile != null)
+                readerNextFile.close();
+        } catch (IOException ex) {
+            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+        }
+     }
+    
+    /**
+     * Starting from the first file, this method permits to iterate over all
+     * the files inside a big archive.
+     * @return a pointer to the extracted file on disk
+     * @throws java.io.IOException when the file had some error 
+     */
+    public File getNextFile() throws IOException {
+            lastReadLine = currentLine;
+            // now get the next line
+            currentLine = readerNextFile.readLine();
+            // increase the counter
+            getNextFileCounter++;
+            // get the new coordinate
+            final long newValue = getValueOutOfLine(currentLine);
+            
+            // define the file pointer that we will be using
+            final File file = new File(readerNextFileName);
+            // now extract the mentioned bytes from our BIG archive
+            extractBytes(file, currentGetNextPosition 
+                    + magicSignature.length(), newValue);
+        
+            // now update the marker for the present offset
+            currentGetNextPosition = newValue;
+            readerNextFileName = getFileNameOutOfLine(currentLine);
+            // all done
+       return file;
+    }
+
+    /**
+     * Returns the last line that was read while iterating the files inside
+     * a big archive in sequential mode
+     * @return The full line as available on the text file
+     */
+    public String getLastLine() {
+        return lastReadLine;
+    }
+
+    /**
+     * How many files were indexed with this sequential processing?
+     * @return 
+     */
+    public long getGetNextFileCounter() {
+        return getNextFileCounter;
+    }
+    
+    
+    
+    /**
+     * Given a line describing a file, get the file name portion
+     * @param line  A line from our index file
+     * @return      The file name. Errors are ignored intentionally to permit
+     *              scale and faster processing speed.
+     */
+    private String getFileNameOutOfLine(final String line){
+        // get the last path indicator
+        final int i1 = line.lastIndexOf("/");
+        // provide the name portion of the file
+        return line.substring(i1+1);
+    }
+    
+    /**
+     * Given a line describing a file in our big archive, get the coordinate value
+     * @param line
+     * @return      A long with the value where the data can be found
+     */
+    private long getValueOutOfLine(final String line){
+        // get the first values with the coordinate
+        final String startValue = line.substring(0, 15);
+        // get the coordinate and ignore the magic signature
+        return Long.parseLong(startValue);
+    }
+    
+     /**
+     * Starting from the first file, this method permits to iterate over all
+     * the files inside a big archive.
+     * @return a pointer to the extracted file on disk
+     * @throws java.io.IOException when the file had some error 
+     */
+    public String getNextSourceCodeFile() throws IOException {
+            lastReadLine = currentLine;
+            // now get the next line
+            currentLine = readerNextFile.readLine();
+            // increase the counter
+            getNextFileCounter++;
+            // get the new coordinate
+            final long newValue = getValueOutOfLine(currentLine);
+            
+            // now extract the mentioned bytes from our BIG archive
+            final String result = extractBytes(currentGetNextPosition 
+                    + magicSignature.length(), newValue);
+        
+            // now update the marker for the present offset
+            currentGetNextPosition = newValue;
+            readerNextFileName = getFileNameOutOfLine(currentLine);
+            // all done
+       return result;
+    }
+
+    /**
+     * Close the big archive and all open files associated with it
+     */
+    public void close() {
+        getNextFileConclude();
+    }
+
+       
+    
     
 }
