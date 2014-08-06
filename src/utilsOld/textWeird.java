@@ -36,14 +36,14 @@ import java.util.regex.Pattern;
  * @modified in 8th of December 2012 to match winbuilder needs.
  * @modified in 12th of May 2014 to fit triplecheck processing.
  */
-public class text {
+public class textWeird {
 
 
      /**
         * Gets a string value from laptop characteristics based on a given pattern.
         * A Matcher object is used internally.
         *
-        * @param source string containing the text to be parsed
+        * @param source string containing the textWeird to be parsed
         * @param reg regular expression pattern to use
         * @param group index of one of the groups found by the pattern
         * @return String containing the found pattern, or null otherwise
@@ -64,7 +64,7 @@ public class text {
         }
 
 
-          /** When given a text string, compute the SHA 256 result */
+          /** When given a textWeird string, compute the SHA 256 result */
   public static String generateStringMD5(String content){
 
         MessageDigest md = null;
@@ -96,7 +96,7 @@ public class text {
     }
       
   
-  /** When given a text string, compute the SHA 256 result */
+  /** When given a textWeird string, compute the SHA 256 result */
   public static String generateStringSHA256(String content){
 
         MessageDigest md = null;
@@ -146,7 +146,7 @@ public class text {
  
            
            String output =
-                utils.text.findRegEx( // only accept a-Z, 0-9 and -, _ chars
+                utils.textWeird.findRegEx( // only accept a-Z, 0-9 and -, _ chars
                         input,"[a-zA-Z0-9-_@\\.]+$", 0);
 
        return output;
@@ -167,7 +167,7 @@ public class text {
      }
 
      /**
-      * Removes all numbers from a text string
+      * Removes all numbers from a textWeird string
       * @param input
       * @return 
       */  
@@ -245,14 +245,14 @@ public class text {
 
 
     /**
-     * Provides a text that will match a desired dimension, reducing
-     * it if necessary.
+     * Provides a textWeird that will match a desired dimension, reducing
+ it if necessary.
      */
 
     public static String shortText(String text, int maxLength){
         String result = text;
 
-        // if this text portion is bigger than allowed, reduce
+        // if this textWeird portion is bigger than allowed, reduce
         if(text.length() > maxLength){
             int half = maxLength / 2;
             int length = text.length();
@@ -414,8 +414,8 @@ public class text {
      * occur either in plural or singular manner. For example, solves the issue
      * of output "1 files" onto the correct "1 file"
      * @param value     The value to output
-     * @param text      The text that will be "pluralized"
-     * @return          The pluralized text
+     * @param text      The textWeird that will be "pluralized"
+     * @return          The pluralized textWeird
      */
     public static String pluralize(int value, String text){
         if(value == 1){
@@ -445,33 +445,33 @@ public class text {
     
     
     /**
-     * Encodes a piece of text using the UTF8 standard
-     * In sum: readable -> unreadable
-    * @param text  The text to be encoded
-     * @return      The resulting HTML compatible text
+     * Encodes a piece of textWeird using the UTF8 standard
+ In sum: readable -> unreadable
+    * @param text  The textWeird to be encoded
+     * @return      The resulting HTML compatible textWeird
      */
     public static String htmlEncode(final String text){
         String result = "failed";
             try {
                 result = URLEncoder.encode(text, "UTF-8" );
             } catch (UnsupportedEncodingException ex) {
-                Logger.getLogger(text.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(textWeird.class.getName()).log(Level.SEVERE, null, ex);
             }
         return result;
     }
     
    /**
-     * Encodes a piece of text using the UTF8 standard
-     * In sum: unreadable -> readable
-     * @param text  The text to be encoded
-     * @return      The resulting HTML compatible text
+     * Encodes a piece of textWeird using the UTF8 standard
+ In sum: unreadable -> readable
+     * @param text  The textWeird to be encoded
+     * @return      The resulting HTML compatible textWeird
      */
     public static String htmlDecode(final String text){
         String result = text;
             try {
                 result = URLDecoder.decode(text, "UTF-8" );
             } catch (UnsupportedEncodingException ex) {
-                Logger.getLogger(text.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(textWeird.class.getName()).log(Level.SEVERE, null, ex);
             }
         return result;
     }
@@ -480,7 +480,7 @@ public class text {
        
     /**
      * Count the number of lines inside a given file
-     * @param file  A target text file
+     * @param file  A target textWeird file
      * @return      The number of line
      */
     public static int countLines(File file){
@@ -500,5 +500,22 @@ public class text {
         }
         return counter;
     } 
+   
+     /**
+     * Remove the initial and ending spaces on a given textWeird string.
+     * @param text  The textWeird to be filtered
+     * @return      The textWeird without leading nor trailing white spaces
+     */
+    public static String removeLeadingAndTrailingSpaces(final String text){
+        // add the pattern for lead and trail spaces
+        Pattern pattern = Pattern.compile("^\\s+|\\s+$");
+        Matcher matcher = pattern.matcher(text);
+        StringBuffer result = new StringBuffer();
+        // add the replacement
+        while(matcher.find())
+            matcher.appendReplacement(result, "");
+        matcher.appendTail(result);
+        return result.toString();
+    }
     
 }

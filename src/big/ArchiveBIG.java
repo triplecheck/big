@@ -49,6 +49,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.compress.archivers.ArchiveException;
@@ -259,7 +260,7 @@ public class ArchiveBIG {
      * from the BIG archive.
      */
     private void pointRestoreAndSave(final File folderToAdd){
-        // get the last line from our log text file
+        // get the last line from our log textWeird file
         String lastLine = utils.files.getLastLine(fileLogBIG);
         // are we detecting that something went wrong?
         if((lastLine.isEmpty() == false) && (lastLine.startsWith("start:"))){
@@ -539,8 +540,8 @@ public class ArchiveBIG {
     
     
     /**
-     * Version 2 that permits to extract the text from a compressed file without
-     * creating any file on the disk.
+     * Version 2 that permits to extract the textWeird from a compressed file without
+ creating any file on the disk.
      * @param startPosition Offset where the file begins
      * @param endPosition   Offset where the file ends
      * @return      The source code of the compressed file
@@ -602,8 +603,8 @@ public class ArchiveBIG {
     
     
     /**
-     * Looks inside a text file to discover the line that contains a given
-     * keyword. When the line is discovered then it returns an array where
+     * Looks inside a textWeird file to discover the line that contains a given
+ keyword. When the line is discovered then it returns an array where
      * the first long represents the start of data and the second represents
      * its end.
      * @param file      A file on disk
@@ -655,9 +656,9 @@ public class ArchiveBIG {
      * @param idSHA1    The SHA1 identifier to find
      * @return          A list of files found with this SHA1
      */
-    public String findFilesWithSpecificSHA1(final String idSHA1){
+    public ArrayList<String> findFilesWithSpecificSHA1(final String idSHA1){
         // prepare the variable where we place the results
-        String result = "";
+        ArrayList<String> result = new ArrayList();
         
         // open the file for reading
         getNextFileInitiate();
@@ -665,43 +666,16 @@ public class ArchiveBIG {
         String line;
         try {
             while( (line = readerNextFile.readLine()) !=  null){ 
-            
                 // get the SHA1 signature
                 final String SHA1 = line.substring(16, 56);
-                
                 // no need to continue if no match exists
-                if(utils.text.equals(SHA1, idSHA1)==false){
+                if(utils.textWeird.equals(SHA1, idSHA1)==false){
                     continue;
                 }
-
                 // ge the file name details after coordinate 57
                 final String fileName = line.substring(57);
-                // add this data to our list
-                result = result.concat(fileName.concat("\n"));
-//                System.out.println(
-//                        SHA1 + "->" + 
-//                        fileName);
-                
-                // get the partial signature of the SHA1
-//                final String partialSHA1 = line.substring(16, size2);
-//                
-//                //if(utils.text.equals(SHA1, idSHA1)){
-//                if(utils.text.equals(partialIdSHA1, partialSHA1)){
-//                // get the SHA1 signature
-//                final String SHA1 = line.substring(16, 56);
-//                
-//                    if(utils.text.equals(SHA1, idSHA1)==false){
-//                        continue;
-//                    }
-//                
-//                    // yes, we got a match 
-//                    final String fileName = line.substring(57);
-//                    // add it to our list
-//                    result = result.concat(fileName.concat("\n"));
-//                    System.out.println(
-//                            SHA1 + "->" + 
-//                            fileName);
-//                }
+                // add this data to our result list
+                result.add(fileName);
             }
             
         } catch (IOException ex) {
@@ -782,7 +756,7 @@ public class ArchiveBIG {
     /**
      * Returns the last line that was read while iterating the files inside
      * a big archive in sequential mode
-     * @return The full line as available on the text file
+     * @return The full line as available on the textWeird file
      */
     public String getLastLine() {
         return lastReadLine;
