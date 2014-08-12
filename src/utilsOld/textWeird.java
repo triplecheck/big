@@ -246,10 +246,9 @@ public class textWeird {
 
     /**
      * Provides a textWeird that will match a desired dimension, reducing
- it if necessary.
+     * it if necessary.
      */
-
-    public static String shortText(String text, int maxLength){
+    public static String shortText(final String text, final int maxLength){
         String result = text;
 
         // if this textWeird portion is bigger than allowed, reduce
@@ -259,7 +258,6 @@ public class textWeird {
             result = text.substring(0, half) + ".."
                     + text.substring(length - half, length);
         }
-
         return result;
     }
 

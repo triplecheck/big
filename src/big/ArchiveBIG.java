@@ -701,6 +701,7 @@ public class ArchiveBIG {
             readerNextFile.readLine();
             // now avoid the first file because we know its offset is 0000
             lastReadLine = readerNextFile.readLine();
+            currentLine = lastReadLine;
             readerNextFileName = getFileNameOutOfLine(lastReadLine);
             
             } catch (FileNotFoundException ex) {
