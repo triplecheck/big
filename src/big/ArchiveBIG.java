@@ -66,7 +66,10 @@ import utils.header;
  */
 public class ArchiveBIG {
 
+    // settings
     private final int maxFileSize = 1000000 * 100; // max size = 100Mb 
+    
+    // variables
     private Boolean isReady = false;
     private OutputStream outputStream = null;
     private BufferedWriter writer = null;
@@ -669,7 +672,7 @@ public class ArchiveBIG {
                 // get the SHA1 signature
                 final String SHA1 = line.substring(16, 56);
                 // no need to continue if no match exists
-                if(utils.textWeird.equals(SHA1, idSHA1)==false){
+                if(utils.text.equals(SHA1, idSHA1)==false){
                     continue;
                 }
                 // ge the file name details after coordinate 57
@@ -688,6 +691,38 @@ public class ArchiveBIG {
         // all done
        return result;
     }
+    
+    
+        
+    public String findFileWithSpecificSHA1(final String signatureSHA1) {
+        // open the file for reading
+        getNextFileInitiate();
+        String result = null;
+        String line;
+        try {
+            while( (line = readerNextFile.readLine()) !=  null){ 
+                // get the SHA1 signature
+                final String SHA1 = line.substring(16, 56);
+                // no need to continue if no match exists
+                if(utils.text.equals(SHA1, signatureSHA1)==false){
+                    continue;
+                }
+                // ge the file name details after coordinate 57
+                final String fileName = line.substring(57);
+                // add this data to our result list
+                result = fileName;
+                break;
+            }
+            
+        } catch (IOException ex) {
+            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            // close the files for reading
+            getNextFileConclude();    
+        }
+        // all done
+       return result;
+    } 
     
     /**
      * Prepares this archive to iterate all files sequentially
@@ -831,7 +866,6 @@ public class ArchiveBIG {
         getNextFileConclude();
     }
 
-       
-    
+
     
 }
