@@ -17,7 +17,11 @@ What is currently NOT supported:
 - Avoiding duplicates of the same file(s) to be written
 - Sorting of files
 - Archive splitting
-- Compression of files to save overall disk space
+
+What is supported:
+- writing and reading files in sequential mode
+- retrieving the files matching a SHA1 signature or folder location
+- file compression using the ZIP algorithm 
 
 What is it good for?
 - Simplicity, any tool can read/extract data from a BIG archive

@@ -2,7 +2,7 @@
  * Methods to ease the handling of files
  */
 
-package utils;
+package utilsOld;
 
 import java.io.*;
 import java.text.DecimalFormat;
@@ -151,6 +151,7 @@ public static long folderSize(File where){
  /**
  * Find all files in a given folder and respective subfolders
  * @param where A file object of the start folder
+ * @param what  What kind of extension are you expecting to find?
  * @param maxDeep How deep is the crawl allowed to proceed
  * @return An array containing all the found files, returns null if none is
  * found
@@ -163,7 +164,7 @@ public static long folderSize(File where){
     if(files != null)
     for (File file : files) {
       if (file.isFile()){
-          if(file.getName().contains(what))
+          if(file.getName().endsWith(what))
              result.add(file);}
       else
       if ( (file.isDirectory())
