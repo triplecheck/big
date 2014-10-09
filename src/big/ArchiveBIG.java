@@ -232,6 +232,26 @@ public class ArchiveBIG {
     }
     
     /**
+     * Add all files from a given folder inside our archive
+     * @param fileToAdd The file we want to add
+     */
+    public void addFile(final File fileToAdd) {
+        // preflight checks
+        if(isReady == false){
+            System.err.println("BIG241 - Error, Archive is not ready");
+            return;
+        }
+        // open the index files
+        operationStart(fileToAdd);
+        // call the iteration to go through all files
+        addFile(fileToAdd, fileToAdd); 
+        // now close all the pointers
+        operationEnd();
+    }
+    
+    
+    
+    /**
      * Opens the BIG file and respective index
      */
     private void operationStart(final File folderToAdd){
@@ -267,7 +287,7 @@ public class ArchiveBIG {
         String lastLine = utils.files.getLastLine(fileLogBIG);
         // are we detecting that something went wrong?
         if((lastLine.isEmpty() == false) && (lastLine.startsWith("start:"))){
-            System.out.println("BIG190 Something went wrong last time, we need to restore the last saved point!");
+            System.out.println("BIG290 Something went wrong last time, we need to restore the last saved point!");
             // we need to restore the last saved point
             final String snippet = lastLine.substring(lastLine.indexOf(" ")+1);
             final String number = snippet.substring(0, snippet.indexOf(" "));
@@ -864,6 +884,18 @@ public class ArchiveBIG {
      */
     public void close() {
         getNextFileConclude();
+    }
+
+    public File getFileLog() {
+        return fileLogBIG;
+    }
+
+    public File getFile() {
+        return fileMainBIG;
+    }
+
+    public File getFileIndex() {
+        return fileIndexBIG;
     }
 
 
