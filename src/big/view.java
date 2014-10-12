@@ -14,15 +14,20 @@
 package big;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Toolkit;
+import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.net.URL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
-import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
@@ -33,6 +38,11 @@ import javax.swing.tree.DefaultTreeModel;
  */
 public class view extends javax.swing.JFrame {
 
+    
+    // are we testing the software or not?
+    boolean testMode = true;
+   
+    
     // the settings for the last folder/file that was open
     static final String lastFolderFilename = "last-folder.txt";
     static final File lastFolder = new File(lastFolderFilename);
@@ -40,7 +50,12 @@ public class view extends javax.swing.JFrame {
     private ArchiveBIG big;
     private DefaultTreeModel model;
     private DefaultMutableTreeNode root;
-        
+    private final String searchTerm = "Search files..";
+      
+    
+    // we use these two variables for the file filtering
+    private String keywordSearch;
+    private Boolean hasKeywordSearch = false;
     
     /**
      * Creates new form view
@@ -90,6 +105,7 @@ public class view extends javax.swing.JFrame {
         jPanel3 = new javax.swing.JPanel();
         text = new javax.swing.JEditorPane();
         search = new javax.swing.JTextField();
+        buttonSave = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -173,22 +189,35 @@ public class view extends javax.swing.JFrame {
             }
         });
 
+        buttonSave.setIcon(new javax.swing.ImageIcon(getClass().getResource("/big/disk-black.png"))); // NOI18N
+        buttonSave.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+        buttonSave.setEnabled(false);
+        buttonSave.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                buttonSaveActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout panelEastLayout = new javax.swing.GroupLayout(panelEast);
         panelEast.setLayout(panelEastLayout);
         panelEastLayout.setHorizontalGroup(
             panelEastLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panelEastLayout.createSequentialGroup()
+            .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 469, Short.MAX_VALUE)
+            .addGroup(panelEastLayout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(search)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(buttonSave, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
-            .addComponent(jScrollPane2)
         );
         panelEastLayout.setVerticalGroup(
             panelEastLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(panelEastLayout.createSequentialGroup()
-                .addGap(5, 5, 5)
-                .addComponent(search, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(11, 11, 11)
+                .addGap(4, 4, 4)
+                .addGroup(panelEastLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(search, javax.swing.GroupLayout.DEFAULT_SIZE, 34, Short.MAX_VALUE)
+                    .addComponent(buttonSave, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jScrollPane2))
         );
 
@@ -198,7 +227,7 @@ public class view extends javax.swing.JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jSplitPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 674, Short.MAX_VALUE)
+            .addComponent(jSplitPane1)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -229,18 +258,25 @@ public class view extends javax.swing.JFrame {
     }//GEN-LAST:event_textKeyTyped
 
     private void searchFocusGained(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_searchFocusGained
+        doSearchMouseClicked();
     }//GEN-LAST:event_searchFocusGained
 
     private void searchFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_searchFocusLost
-       
+       // reset back to the default value when empty
+       searchReset();
     }//GEN-LAST:event_searchFocusLost
 
     private void searchdoSearchKeypress(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_searchdoSearchKeypress
-
+         performSearch(evt);
     }//GEN-LAST:event_searchdoSearchKeypress
 
     private void searchdoSearch(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_searchdoSearch
+         performSearch(evt);
     }//GEN-LAST:event_searchdoSearch
+
+    private void buttonSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonSaveActionPerformed
+        saveSelectedFile();
+    }//GEN-LAST:event_buttonSaveActionPerformed
 
      /**
      * Shows the dialog to allow selecting a folder 
@@ -297,6 +333,7 @@ public class view extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton buttonSave;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JSplitPane jSplitPane1;
@@ -312,7 +349,9 @@ public class view extends javax.swing.JFrame {
      */
     private void openFile() {
         // show the open file dialog
-        chooseFolder();
+        if(testMode == false){
+            chooseFolder();
+        }
         // show the file contents
         displayContents();
     }
@@ -376,12 +415,24 @@ public class view extends javax.swing.JFrame {
         final String 
                 signature = line.substring(16, 56),
                 filename  = line.substring(57);
+        
+        // do we have filtering active?
+        if(hasKeywordSearch){
+            // does the file name contain part of what we are looking for?
+            if(filename.toLowerCase().contains(keywordSearch)==false){
+                // nope, just keep moving to the next line
+                return;
+            }
+        }
+        
         // convert the long number
         final Long position = Long.parseLong(line.substring(00, 15));
         // create the node
         final BigNode node = new BigNode(position, signature, filename);
+        
         // add it up to the tree view listing
         root.add(new DefaultMutableTreeNode(node));
+        counter++;
     }
 
     /**
@@ -394,9 +445,16 @@ public class view extends javax.swing.JFrame {
         model = (DefaultTreeModel)tree.getModel();
         root = (DefaultMutableTreeNode)model.getRoot();
         
+        // reset the treeview and counter
+        root.removeAllChildren();
+        model.setRoot(root);
+        counter = 0;
         // this is needed to ensure we get line-wrapping
         jScrollPane2.setViewportView(text);
-            
+        // initialize the search bar
+        if(hasKeywordSearch == false){
+            search.setText(searchTerm);
+        }
         
     }
 
@@ -422,11 +480,14 @@ public class view extends javax.swing.JFrame {
                 processLine(line);
                 // read the line afterwards
                 line = reader.readLine();
-                counter++;
             } 
         
+            // close the streams
+            reader.close();
+            fileReader.close();
+            
         }catch (Exception e){
-            System.err.println("V413 - Something went wrong while reading the archive");
+            System.err.println("V458 - Something went wrong while reading the archive");
         }
         
     }
@@ -446,6 +507,7 @@ public class view extends javax.swing.JFrame {
         
         // reload the treeview
         model.reload(root);
+        big.close();
     }
 
     /**
@@ -454,10 +516,13 @@ public class view extends javax.swing.JFrame {
     private synchronized void getSelectedTreeNode() {
         DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode) tree.getSelectionPath().getLastPathComponent();
         if(treeNode == null){
+            buttonSave.setEnabled(false);
             return;
         }
         // get the associated object
         BigNode result = (BigNode) treeNode.getUserObject();
+        buttonSave.setEnabled(true);
+            
         processClick(result);
     }
 
@@ -471,44 +536,147 @@ public class view extends javax.swing.JFrame {
             return;
         }
         
-        // define which file we want to delete
-        File temp = new File("temp.bin");
         // extract the file to disk
-        big.getFile(result.filename, temp);
+        final String content = big.extractBytesToRAM(result.positionStart);
         
-        // define the target file
-        File targetFile = result.getExtractedFile();
-        // delete the temp file if available
-        
-        System.out.println("Extracted file to " + targetFile.getAbsolutePath());
-        // read the contents
-        final String content = utils.files.readAsString(targetFile);
         // output to screen
         text.setText(content);
         // place the text back on top
         text.setCaretPosition(0);
         
-        if(targetFile.exists()){
-            targetFile.delete();
+        System.out.println("Loaded " + result.filename);
+    }
+
+    /**
+     * React whenever the user wants to start a search
+     */
+    private void doSearchMouseClicked() {
+        String currentTerm = search.getText();
+        if(currentTerm.equals(searchTerm)){
+            search.setText("");
+            System.out.println("Reset the search box");
+            //searchReset();
+            if(hasKeywordSearch){
+                hasKeywordSearch = false;
+                keywordSearch = null;
+                text.setText("");
+                displayContents();
+            }
+        }
+    }
+    
+    
+     /**
+     * Interprets the keys being pressed on the search box
+     * @param evt the keystroke
+     */
+    private void performSearch(KeyEvent evt) {
+        // people expect to press "ESC" to clear the whole bar
+        if(evt.getKeyCode() == KeyEvent.VK_ESCAPE){
+            search.transferFocus();
+            //System.err.println("SU00 - Pressed ESCAPE on search box");
+            search.setText(searchTerm);
+            searchReset();
+            return;
+        }
+        
+        // ENTER means that we are serious about the current search term
+        if(evt.getKeyCode() == KeyEvent.VK_ENTER){
+            launchSearch();
+            return;
+        } 
+
+        // if the box is empty and someone presses backspace, then do nothing
+        Boolean emptyBox = search.getText().isEmpty();
+        Boolean backspacePressed = evt.getKeyCode() == KeyEvent.VK_BACK_SPACE;
+        if((emptyBox)&&(backspacePressed)){
+            // the result is empty, but make sure we clean up the results box
+            text.setText("");
+            return;
+        }
+        
+        
+        // there is a bug that allows people to write over the "search" default
+        if(search.getText().isEmpty()){
+            searchReset();
+            return;
         }
         
         
         
-        System.out.println("Loaded " + result.filename);
+        // there is a bug that allows people to write over the "search" default
+        if(search.getText().startsWith(searchTerm)){
+            String temp = search.getText().replace(searchTerm, "");
+            search.setText(temp);
+        }
     }
+
+    /**
+     * Launching a search for a given file
+     */
+    private void launchSearch() {
+        System.out.println("V560: Launch a search");
+        text.setText("Showing the results of the search on the treeview."
+                + "\n\n"
+                + "To view the full treeview, remove the search terms."
+                + "");
+        
+        // enable the search
+        hasKeywordSearch = true;
+        keywordSearch = search.getText().toLowerCase();
+        
+        // process all files again
+        displayContents();
+    }
+    
+
+    private void searchReset() {
+        if(search.getText().isEmpty()){
+            search.setText("Search files..");
+            hasKeywordSearch = false;
+            keywordSearch = null;
+            System.out.println("Restoring all results on treeview");
+            // process all files again
+            displayContents();
+        }
+    }
+
+    /**
+     * Saves a file to disk
+     */
+    private void saveSelectedFile() {
+        // get the tree node
+        DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode) tree.getSelectionPath().getLastPathComponent();
+        BigNode result = (BigNode) treeNode.getUserObject();
+        // prepare the file
+        File output = result.getExtractedFile();
+        // save the text from the window to the file
+        utils.files.SaveStringToFile(output, text.getText());
+        
+        try {
+            JOptionPane.showMessageDialog(this, "Saved content to " + output.getCanonicalPath());
+        } catch (IOException ex) {
+            Logger.getLogger(view.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    
+    
 }
 
 
 // the object that we will store on the treeview
 class BigNode{
         final Long
-                position;
+                positionStart;
+        public Long
+                positionEnd;
         final String 
                 signature,
                 filename;
         // Create the node
         BigNode(final long position, final String signature, final String filename){
-            this.position = position;
+            this.positionStart = position;
             this.signature = signature;
             this.filename = filename;
         }

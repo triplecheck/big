@@ -486,9 +486,15 @@ public class ArchiveBIG {
         }
         // now extract the mentioned bytes from our BIG archive
         boolean result = extractBytes(targetFile, coordinates[0], coordinates[1]);
+        System.out.println("BIG 489: Grabbing file from "
+            + coordinates[0]
+            + " to "
+            + coordinates[1]
+        );
         // all done
         return result;
     }
+    
     
     /**
      * Given a position inside our knowledge base, retrieve the data up to
@@ -496,7 +502,7 @@ public class ArchiveBIG {
      * @param targetFile    The new file that will be created
      * @param startPosition The position from where we start to read the data
      */
-    private boolean extractBytes(final File targetFile, final long startPosition,
+    public boolean extractBytes(final File targetFile, final long startPosition,
             final Long endPosition){
         /**
          * This is a tricky method. We will be extracting data from a the BIG
@@ -563,13 +569,13 @@ public class ArchiveBIG {
     
     
     /**
-     * Version 2 that permits to extract the textWeird from a compressed file without
- creating any file on the disk.
+     * Version 2 that permits to extract the text from a compressed file without
+     * creating any file on the disk.
      * @param startPosition Offset where the file begins
      * @param endPosition   Offset where the file ends
      * @return      The source code of the compressed file
      */
-    private String extractBytes(final long startPosition, final Long endPosition){
+    public String extractBytesToRAM(final long startPosition, final Long endPosition){
         
         String result = null;
         
@@ -624,6 +630,91 @@ public class ArchiveBIG {
         return result;
     }
     
+    
+    /**
+     * Version 2 that permits to extract the text from a compressed file without
+     * creating any file on the disk.
+     * @param startPosition Offset where the file begins
+     * @return      The source code of the compressed file
+     */
+    public String extractBytesToRAM(final long filePosition){
+        
+        String result = null;
+        
+        try {
+            
+            // add the signature bytes to our start position
+            long startPosition = filePosition + magicSignature.length();
+            
+            // enable random access to the BIG file (fast as heck)
+            RandomAccessFile dataBIG = new RandomAccessFile(fileMainBIG, "r");
+            // jump directly to the position where the file is positioned
+            dataBIG.seek(startPosition);
+            // create a byte array
+            ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
+
+            // get the end of this file entry (by brute-force)
+            char test = 0;
+            long endPosition = -1;
+            while(test != -1){
+                test = dataBIG.readChar();
+                // if the magic devil number was found..
+                if(test == 66){
+                    // read the next value for confirmation
+                    byte value = dataBIG.readByte();
+                    if(value != 73){
+                        continue;
+                    }
+                    // we found the next entry
+                    endPosition = dataBIG.getFilePointer() - 1;
+                    break;
+                }
+            }
+            
+            // rewind back to the start position
+            dataBIG.seek(startPosition);
+            
+            // now we start reading bytes during the mentioned interval
+            while(dataBIG.getFilePointer() < endPosition){
+                // read a byte from our BIG archive
+                int data = dataBIG.read();
+                byteOutput.write(data);
+            }
+            // flush data at this point
+            byteOutput.flush();
+            // now convert the stream from input into an output (to feed the zip stream)
+            ByteArrayInputStream byteInput = new ByteArrayInputStream(byteOutput.toByteArray());
+            // where we place the decompressed bytes
+            ByteArrayOutputStream textOutput = new ByteArrayOutputStream();
+            // create the zip streamer
+            final ArchiveInputStream archiveStream;
+            archiveStream = new ArchiveStreamFactory().createArchiveInputStream("zip", byteInput);
+            final ZipArchiveEntry entry = (ZipArchiveEntry) archiveStream.getNextEntry();
+            // copy all bytes from one location to the other (and decompress the data)
+            IOUtils.copy(archiveStream, textOutput);
+            // flush the results
+            textOutput.flush();
+            // we've got the result right here!
+            result = textOutput.toString();
+            // now close all the streams that we have open
+            dataBIG.close();
+            byteOutput.close();
+            byteInput.close();
+            textOutput.close();
+            archiveStream.close();
+            
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            return null;
+        } catch (IOException ex) {
+            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            return null;
+        } catch (ArchiveException ex) {
+            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+        }
+          
+        return result;
+    }
     
     /**
      * Looks inside a textWeird file to discover the line that contains a given
@@ -869,7 +960,7 @@ public class ArchiveBIG {
             final long newValue = getValueOutOfLine(currentLine);
             
             // now extract the mentioned bytes from our BIG archive
-            final String result = extractBytes(currentGetNextPosition 
+            final String result = extractBytesToRAM(currentGetNextPosition 
                     + magicSignature.length(), newValue);
         
             // now update the marker for the present offset
@@ -898,6 +989,7 @@ public class ArchiveBIG {
         return fileIndexBIG;
     }
 
+   
 
     
 }
