@@ -14,7 +14,6 @@
 package big;
 
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
@@ -40,7 +39,7 @@ public class view extends javax.swing.JFrame {
 
     
     // are we testing the software or not?
-    boolean testMode = true;
+    boolean automaticMode = false;
    
     
     // the settings for the last folder/file that was open
@@ -82,9 +81,6 @@ public class view extends javax.swing.JFrame {
         
         // change the background to full white
         getContentPane().setBackground( Color.WHITE );
-        
-        // opens a big zip as first operation
-        openFile();
         
     }
 
@@ -322,16 +318,58 @@ public class view extends javax.swing.JFrame {
     /**
      * @param args the command line arguments
      */
-    public static void main(String args[]) {
+    public static void main(final String args[]) {
+        
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             @Override
             public void run() {
-                new view().setVisible(true);
+                view thisView = new view();
+                processCommandLine(args, thisView);
+                // opens a big zip as first operation
+                thisView.setVisible(true);
+                thisView.openFile();
+                
             }
+
+          
         });
+        
+         
     }
 
+    /**
+     * Handle possible command line parameters when available.
+     * @param args 
+     */
+     private static void processCommandLine(final String[] args, view thisView) {
+         // empty parameters?
+         if(args.length == 0){
+             // nothing more to do
+             return;
+         }
+         
+         // create a file pointer
+         File thisFile = new File(args[0]);
+
+         // check if the mentioned file exists or not
+         if(thisFile.exists() == false || thisFile.isDirectory()){
+             // no need to continue
+             System.out.println("V360: Failed to load: " + thisFile.getAbsolutePath());
+             return;
+         }
+         
+         // initialize the automatic mode
+         thisView.automaticMode = true;
+         utils.files.SaveStringToFile(lastFolder, thisFile.getAbsolutePath());
+
+         
+         // get the first parameter and use it as starting step
+         System.out.println("Loading from command line: " 
+                 + thisFile.getAbsolutePath());
+         
+     }
+    
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton buttonSave;
     private javax.swing.JPanel jPanel3;
@@ -349,7 +387,7 @@ public class view extends javax.swing.JFrame {
      */
     private void openFile() {
         // show the open file dialog
-        if(testMode == false){
+        if(automaticMode == false){
             chooseFolder();
         }
         // show the file contents
