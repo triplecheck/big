@@ -309,7 +309,6 @@ public class view extends javax.swing.JFrame {
             return;
         }
         
-       
         // write this name to the file on disk
         utils.files.SaveStringToFile(lastFolder, fc.getSelectedFile().getAbsolutePath());
     }
@@ -329,13 +328,8 @@ public class view extends javax.swing.JFrame {
                 // opens a big zip as first operation
                 thisView.setVisible(true);
                 thisView.openFile();
-                
             }
-
-          
         });
-        
-         
     }
 
     /**

@@ -92,6 +92,7 @@ public class ArchiveBIG {
     private BufferedReader readerNextFile;
     private FileReader fileReaderNext;
     private long currentGetNextPosition = 0;
+
     private String 
             readerNextFileName,
             lastReadLine,
@@ -501,6 +502,8 @@ public class ArchiveBIG {
      * the next file indicator.
      * @param targetFile    The new file that will be created
      * @param startPosition The position from where we start to read the data
+     * @param endPosition
+     * @return 
      */
     public boolean extractBytes(final File targetFile, final long startPosition,
             final Long endPosition){
@@ -634,7 +637,7 @@ public class ArchiveBIG {
     /**
      * Version 2 that permits to extract the text from a compressed file without
      * creating any file on the disk.
-     * @param startPosition Offset where the file begins
+     * @param filePosition
      * @return      The source code of the compressed file
      */
     public String extractBytesToRAM(final long filePosition){
@@ -944,7 +947,39 @@ public class ArchiveBIG {
         return Long.parseLong(startValue);
     }
     
-     /**
+    /**
+     * Skip a given number of files until we get the next pointer to reader.
+     * @param currentLine   The line number that was counted up to that point
+     */
+    public void moveToLinePosition(final long currentLine){
+//        try {
+//            // attempt to skip a given number of bytes
+//            readerNextFile.skip(nextPosition);
+//            getNextFileCounter = currentLine;
+//            this.currentGetNextPosition = currentGetNextPosition;
+//        } catch (IOException ex) {
+//            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+        
+        try {
+            // ignore all these lines until we can resume
+            while(getNextFileCounter < currentLine){
+                   emptyLineRead();
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+    }
+    /**
+     * Does a simple line read to advance the counters
+     */
+    private void emptyLineRead() throws IOException{
+        readerNextFile.readLine();
+        getNextFileCounter++;
+    }
+    
+    /**
      * Starting from the first file, this method permits to iterate over all
      * the files inside a big archive.
      * @return a pointer to the extracted file on disk
@@ -988,8 +1023,11 @@ public class ArchiveBIG {
     public File getFileIndex() {
         return fileIndexBIG;
     }
-
    
+    public long getCurrentGetNextPosition() {
+        return currentGetNextPosition;
+    }
+    
 
     
 }

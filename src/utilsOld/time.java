@@ -2,7 +2,7 @@
  * Some handy routines to help on everyday tasks
  */
 
-package utils;
+package utilsOld;
 
 import java.io.File;
 import java.text.DateFormat;
@@ -228,7 +228,7 @@ public class time {
         //TODO for some reason "T" and "Z" are not accepted as parameters
         return textDate.replace(" ", "T") + "Z";
     }
-    
-    
+
+  
    
 }
