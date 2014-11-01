@@ -64,7 +64,7 @@ import utils.header;
  *
  * @author Nuno Brito, 7th of July 2014 in Darmstadt, Germany
  */
-public class ArchiveBIG {
+public class BigZip {
 
     // settings
     private final int maxFileSize = 1000000 * 100; // max size = 100Mb 
@@ -104,7 +104,7 @@ public class ArchiveBIG {
      * that the archive is ready to be used.
      * @param fileTarget    the file that we want to open 
      */
-    public ArchiveBIG(final File fileTarget) {
+    public BigZip(final File fileTarget) {
         Start(fileTarget, false);
     }
   
@@ -115,7 +115,7 @@ public class ArchiveBIG {
      * @param fileTarget    the file that we want to open 
      * @param silent        No initialisation messages are output
      */
-    public ArchiveBIG(final File fileTarget, boolean silent) {
+    public BigZip(final File fileTarget, boolean silent) {
         Start(fileTarget, silent);
     }
     
@@ -273,7 +273,7 @@ public class ArchiveBIG {
                 new FileWriter(fileIndexBIG, true), 8192);
             
         } catch (IOException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
@@ -353,7 +353,7 @@ public class ArchiveBIG {
             );
             
         } catch (IOException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
@@ -454,7 +454,7 @@ public class ArchiveBIG {
             try {
                 inputStream.close();
             } catch (IOException ex) {
-                Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
     }
@@ -560,10 +560,10 @@ public class ArchiveBIG {
             
             
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
             return false;
         } catch (IOException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
             return false;
         }
           
@@ -621,13 +621,13 @@ public class ArchiveBIG {
             archiveStream.close();
             
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
             return null;
         } catch (IOException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
             return null;
         } catch (ArchiveException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
         }
           
         return result;
@@ -707,13 +707,13 @@ public class ArchiveBIG {
             archiveStream.close();
             
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
             return null;
         } catch (IOException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
             return null;
         } catch (ArchiveException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
         }
           
         return result;
@@ -796,7 +796,7 @@ public class ArchiveBIG {
             }
             
         } catch (IOException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             // close the files for reading
             getNextFileConclude();    
@@ -829,7 +829,7 @@ public class ArchiveBIG {
             }
             
         } catch (IOException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             // close the files for reading
             getNextFileConclude();    
@@ -856,7 +856,7 @@ public class ArchiveBIG {
             } catch (FileNotFoundException ex) {
             Logger.getLogger(files.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
@@ -871,7 +871,7 @@ public class ArchiveBIG {
             if(readerNextFile != null)
                 readerNextFile.close();
         } catch (IOException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
         }
      }
     
@@ -948,6 +948,21 @@ public class ArchiveBIG {
     }
     
     /**
+     * Tries to jump directly to the last position from where processing took place
+     * @param offsetPosition
+     * @param linesProcessed 
+     */
+    public void moveToOffsetPosition(final long offsetPosition, final long linesProcessed){
+         try {
+            // attempt to skip a given number of bytes
+            readerNextFile.skip(offsetPosition);
+            getNextFileCounter = linesProcessed;
+        } catch (IOException ex) {
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
+        }       
+    }
+    
+    /**
      * Skip a given number of files until we get the next pointer to reader.
      * @param currentLine   The line number that was counted up to that point
      */
@@ -958,7 +973,7 @@ public class ArchiveBIG {
 //            getNextFileCounter = currentLine;
 //            this.currentGetNextPosition = currentGetNextPosition;
 //        } catch (IOException ex) {
-//            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+//            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
 //        }
         
         try {
@@ -967,7 +982,7 @@ public class ArchiveBIG {
                    emptyLineRead();
             }
         } catch (IOException ex) {
-            Logger.getLogger(ArchiveBIG.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
         }
         
     }
@@ -1027,7 +1042,11 @@ public class ArchiveBIG {
     public long getCurrentGetNextPosition() {
         return currentGetNextPosition;
     }
-    
 
+    public String getCurrentLine() {
+        return currentLine;
+    }
+    
+    
     
 }

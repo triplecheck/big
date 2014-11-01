@@ -46,7 +46,7 @@ public class view extends javax.swing.JFrame {
     static final String lastFolderFilename = "last-folder.txt";
     static final File lastFolder = new File(lastFolderFilename);
     private int counter;
-    private ArchiveBIG big;
+    private BigZip big;
     private DefaultTreeModel model;
     private DefaultMutableTreeNode root;
     private final String searchTerm = "Search files..";
@@ -422,7 +422,7 @@ public class view extends javax.swing.JFrame {
         }
         
         // open up the big archive
-        big = new ArchiveBIG(lastFile);
+        big = new BigZip(lastFile);
         
         File indexFile = big.getFileIndex();
         // check if the file for index does exist
@@ -494,7 +494,7 @@ public class view extends javax.swing.JFrame {
      * Process the lines inside our archive
      * @param big 
      */
-    private void processLines(ArchiveBIG big) {
+    private void processLines(BigZip big) {
         // list the contents
         BufferedReader reader;
         try {
