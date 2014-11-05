@@ -198,7 +198,7 @@ public class BigZip {
             // did this worked?
             if(file.exists() == false){
                 // we failed to create our file
-                System.err.println("BIG88 - Error creating file: "
+                System.err.println("BIG201 - Error creating file: "
                  + file.getAbsolutePath());
                 return false;
             }
@@ -1046,7 +1046,5 @@ public class BigZip {
     public String getCurrentLine() {
         return currentLine;
     }
-    
-    
     
 }
