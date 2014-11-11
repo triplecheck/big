@@ -22,6 +22,7 @@ public class LOC {
 
     static BigZip big;
     static long counter = 0;
+    static boolean debug = false;
     
     /**
      * We expect as argument the location of the big archive
@@ -30,7 +31,17 @@ public class LOC {
      */
     public static void main(String[] args) throws IOException{
         
-        String fileLocationBig = "../../kb/storage/Java.big";
+        String fileLocationBig;
+        
+        if(debug){
+            fileLocationBig = "../../kb/storage/Java.big";
+        }else{
+            if(args.length == 0){
+                System.err.println("Error, missing parameter to indicate location of big zip.");
+                return;
+            }
+            fileLocationBig = args[0];
+        }
         
         // transform into a file
         final File fileTemp = new File(fileLocationBig);
@@ -38,6 +49,13 @@ public class LOC {
         fileLocationBig = utils.files.getCanonical(fileTemp);
         // get the final version in clean state
         final File file = new File(fileLocationBig);
+
+        // does the file exist?
+        if(file.exists() == false){
+            System.err.println("Error, couldn't find: " + file.getAbsolutePath());
+            return;
+        }
+
         // open the big archive
         big = new BigZip(file);
         // initialize the file iterator
@@ -72,8 +90,6 @@ public class LOC {
     private static void processSourceCode(final String sourceCode) throws IOException {
         // count lines, including empty ones
         counter += utils.text.getLOC(sourceCode);
-        
-        
     }
 
     
@@ -97,7 +113,7 @@ public class LOC {
                         
                         // only show after we indexed some results
                         if(counterFiles > 1){
-                            System.out.println(valueFiles + " files, "
+                            System.out.println(valueFiles + " files: "
                                     + valueLines
                                     + " lines");
                         }
