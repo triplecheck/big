@@ -11,8 +11,9 @@
    </text>
  */
 
-package big;
+package GUI;
 
+import big.BigZip;
 import java.awt.Color;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
