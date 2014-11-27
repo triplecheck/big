@@ -92,9 +92,7 @@ public class LOC {
         counter += utils.text.getLOC(sourceCode);
     }
 
-    
-    
-        /**
+    /**
      * Launch a thread that will check how the indexing is progressing
      */
     static void launchMonitoringThread(){
