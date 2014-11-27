@@ -13,7 +13,6 @@
 package tools;
 
 import java.io.File;
-import java.io.IOException;
 import utils.model.FileReadLines;
 
 /**
@@ -23,7 +22,7 @@ import utils.model.FileReadLines;
 public class sanitize extends FileReadLines{
 
     // settings
-    static private final String fileLocationBig = "../../kb/storage/Java.big";
+    static private final String fileLocationBig = "../../kb/storage/Java.big-index";
     
     // internal variables
     FileReadLines fileRead;
@@ -38,11 +37,21 @@ public class sanitize extends FileReadLines{
     
     /**
      * @param args the command line arguments
-     * @throws java.io.IOException
      */
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args){
         sanitize sane = new sanitize(new File(fileLocationBig));
         sane.processArchive();
+    }
+
+    @Override
+    public void monitorMessage() {
+        // get the counter of lines
+        long counterLines = getCurrentLine();
+        // get the number properly formatted
+        final String valueLines 
+            = utils.text.convertToHumanNumbers(counterLines);
+        // output the number of lines already read
+        System.out.println(valueLines + " lines");
     }
 
    
