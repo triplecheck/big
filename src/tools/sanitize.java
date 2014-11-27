@@ -32,7 +32,8 @@ public class sanitize extends FileReadLines{
     }
 
      @Override
-    public void processSourceCode(String sourceCode) {
+    public void processTextLine(String sourceCode) {
+        // soon to have here our code to handle the text line
     }
     
     /**
@@ -40,7 +41,7 @@ public class sanitize extends FileReadLines{
      */
     public static void main(String[] args){
         sanitize sane = new sanitize(new File(fileLocationBig));
-        sane.processArchive();
+        sane.processTextFile();
     }
 
     @Override
@@ -53,7 +54,5 @@ public class sanitize extends FileReadLines{
         // output the number of lines already read
         System.out.println(valueLines + " lines");
     }
-
-   
     
 }
