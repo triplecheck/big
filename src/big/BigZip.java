@@ -4,7 +4,7 @@
  * Creator: Organization: TripleCheck (contact@triplecheck.de)
  * Created: 2014-07-07T13:49:34Z
  * LicenseName: EUPL-1.1-without-appendix
- * FileName: ArchiveBIG.java  
+ * FileName: BigZip.java  
  * FileType: SOURCE
  * FileCopyrightText: <text> Copyright 2014 Nuno Brito, TripleCheck </text>
  * FileComment: <text>
