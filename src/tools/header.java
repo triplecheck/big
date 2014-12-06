@@ -10,7 +10,7 @@
  * FileComment: <text> Provides a standardized header for each index file</text> 
  */
 
-package utils;
+package tools;
 
 /**
  *
@@ -18,20 +18,39 @@ package utils;
  */
 public class header {
 
+    // change these settings to match your desired values
+    static String 
+            license = "",
+            copyright = "TripleCheck at http://github.com/triplecheck";
+    
     /**
      * Creates the first line with the copyright header information
      * @return A single line with the header for this index file
      */
     public static String create(){
+        
+        // add the license header
+        String licenseText = "";
+        if(license.isEmpty() == false){
+            licenseText = license
+                    + " license"
+                    + " |";
+        }
+        
+        // add the license header
+        String copyrightText = "";
+        if(copyright.isEmpty() == false){
+            licenseText = copyright;
+        }
+        
         String header = "Since " 
                     + utils.time.getDateTimeISO()
                     + " | "
-                    + "CC-BY-4.0"
-                    + " license"
-                    + " | Copyright (c) "
+                    + licenseText
+                    + " Copyright (c) "
                     + utils.time.getCurrentYear()
                     + " "
-                    + "TripleCheck at http://github.com/triplecheck"
+                    + copyrightText
                 ;
         return header;
     }
