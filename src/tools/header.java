@@ -65,9 +65,6 @@ public class header {
         String header = designation
                     + " | "
                     + utils.time.getDateTimeISO()
-                    + " | "
-                    + "CC-BY-4.0"
-                    + " license"
                     + " | Copyright (C) "
                     + utils.time.getCurrentYear()
                     + " "

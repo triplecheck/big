@@ -67,7 +67,9 @@ import tools.header;
 public class BigZip {
 
     // settings
-    private final int maxFileSize = 1000000 * 100; // max size = 100Mb 
+    private int 
+            // how big a file do we accept for storing?
+            maxFileSize = 1000000 * 100; // default max size = 100Mb 
     
     // variables
     private Boolean isReady = false;
@@ -311,8 +313,8 @@ public class BigZip {
                 + utils.files.getPrettyFileSize(currentPosition) 
                 + " "
                 + utils.time.getDateTimeISO()
-                + " -> "
-                + folderToAdd.getAbsolutePath()
+                + "->"
+                + folderToAdd.getName()
         );
     }
     
@@ -391,6 +393,13 @@ public class BigZip {
      * Copies one file into the big archive
      */ 
     private boolean addFile(final File baseFolder, final File fileToCopy){
+        
+        // avoid files with size above our limits
+        if(fileToCopy.length() > maxFileSize){
+            // we reserve the false flag for exceptions
+            return true;
+        }
+        
     // declare
         FileInputStream inputStream = null;
     try {
@@ -1045,6 +1054,14 @@ public class BigZip {
 
     public String getCurrentLine() {
         return currentLine;
+    }
+
+    /**
+     * Sets the maximum size accepted as a file for storage.
+     * @param maxFileSizeBigZip 
+     */
+    public void setFileSizeLimit(final int maxFileSizeBigZip) {
+        maxFileSize = maxFileSizeBigZip;
     }
     
 }
