@@ -186,7 +186,7 @@ public class view extends javax.swing.JFrame {
             }
         });
 
-        buttonSave.setIcon(new javax.swing.ImageIcon(getClass().getResource("/big/disk-black.png"))); // NOI18N
+        buttonSave.setText("Save");
         buttonSave.setBorder(javax.swing.BorderFactory.createEtchedBorder());
         buttonSave.setEnabled(false);
         buttonSave.addActionListener(new java.awt.event.ActionListener() {
@@ -199,12 +199,12 @@ public class view extends javax.swing.JFrame {
         panelEast.setLayout(panelEastLayout);
         panelEastLayout.setHorizontalGroup(
             panelEastLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 469, Short.MAX_VALUE)
+            .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 441, Short.MAX_VALUE)
             .addGroup(panelEastLayout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(search)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(buttonSave, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(buttonSave, javax.swing.GroupLayout.PREFERRED_SIZE, 66, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
         panelEastLayout.setVerticalGroup(

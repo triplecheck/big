@@ -54,6 +54,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
+import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.utils.IOUtils;
@@ -238,7 +239,7 @@ public class BigZip {
      * Add all files from a given folder inside our archive
      * @param fileToAdd The file we want to add
      */
-    public void addFile(final File fileToAdd) {
+    public synchronized void addFile(final File fileToAdd) {
         // preflight checks
         if(isReady == false){
             System.err.println("BIG241 - Error, Archive is not ready");
@@ -287,9 +288,10 @@ public class BigZip {
      */
     private void pointRestoreAndSave(final File folderToAdd){
         // get the last line from our log textWeird file
-        String lastLine = utils.files.getLastLine(fileLogBIG);
+        String lastLine = utils.files.getLastLineFast(fileLogBIG);
         // are we detecting that something went wrong?
-        if((lastLine.isEmpty() == false) && (lastLine.startsWith("start:"))){
+        if((lastLine.isEmpty() == false) 
+                && (lastLine.startsWith("start:"))){
             System.out.println("BIG290 Something went wrong last time, we need to restore the last saved point!");
             // we need to restore the last saved point
             final String snippet = lastLine.substring(lastLine.indexOf(" ")+1);
@@ -389,10 +391,76 @@ public class BigZip {
      }
     
      
-    /**
+     
+   /**
      * Copies one file into the big archive
      */ 
     private boolean addFile(final File baseFolder, final File fileToCopy){
+        
+        // declare
+        ByteArrayOutputStream outputZipStream = new ByteArrayOutputStream();
+    try {
+        /* Create Archive Output Stream that attaches File Output Stream / and specifies type of compression */
+        ArchiveOutputStream logical_zip = new ArchiveStreamFactory().createArchiveOutputStream(ArchiveStreamFactory.ZIP, outputZipStream);
+        /* Create Archieve entry - write header information*/
+        logical_zip.putArchiveEntry(new ZipArchiveEntry(fileToCopy.getName()));
+        /* Copy input file */
+        IOUtils.copy(new FileInputStream(fileToCopy), logical_zip);
+        logical_zip.closeArchiveEntry();
+        logical_zip.finish();
+        logical_zip.flush();
+        
+        // get the bytes
+        final ByteArrayInputStream byteInput = new ByteArrayInputStream(outputZipStream.toByteArray());
+        
+        byte[] buffer = new byte[8192];
+        int length,
+                counter = 0;
+        // add the magic number to this file block
+        outputStream.write(magicSignature.getBytes());
+        // now copy the whole file into the BIG archive
+        while ((length = byteInput.read(buffer)) > 0) {
+            outputStream.write(buffer, 0, length);
+            counter += length;
+        }
+        // if there is something else to be flushed, do it now
+        outputStream.flush();
+       
+        
+        
+        // calculate the base path
+        final String resultingPath = fileToCopy.getAbsolutePath().replace(basePath, "");
+        
+        // calculate the SHA1 signature
+        final String output = utils.thirdparty.Checksum.generateFileChecksum("SHA-1", fileToCopy);
+        
+        // write a new line in our index file
+        writer.write("\n" 
+                + utils.files.getPrettyFileSize(currentPosition)
+                + " "
+                + output
+                + " " 
+                + resultingPath
+        );
+        // increase the position counter
+        currentPosition += counter + magicSignature.length();
+        
+        
+    } catch(Exception e){
+        System.err.println("BIG346 - Error copying file: " + fileToCopy.getAbsolutePath());
+        return false;
+    }  
+    
+    finally {
+    }
+    return true;
+}  
+     
+     
+    /**
+     * Copies one file into the big archive
+     */ 
+    private boolean addFileOld(final File baseFolder, final File fileToCopy){
         
         // avoid files with size above our limits
         if(fileToCopy.length() > maxFileSize){
@@ -410,7 +478,7 @@ public class BigZip {
             fileZip.delete();
             // this file really can't exist
             if(fileZip.exists()){
-                System.out.println("BIG305 - Failed to delete " + fileZip.getName());
+                System.out.println("BIG413 - Failed to delete " + fileZip.getName());
                 return false;
             }
         }
