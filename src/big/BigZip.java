@@ -457,86 +457,86 @@ public class BigZip {
 }  
      
      
-    /**
-     * Copies one file into the big archive
-     */ 
-    private boolean addFileOld(final File baseFolder, final File fileToCopy){
-        
-        // avoid files with size above our limits
-        if(fileToCopy.length() > maxFileSize){
-            // we reserve the false flag for exceptions
-            return true;
-        }
-        
-    // declare
-        FileInputStream inputStream = null;
-    try {
-        // create the place holder for the zip file
-        File fileZip = new File("temp.zip");
-        // this file can't exist
-        if(fileZip.exists()){
-            fileZip.delete();
-            // this file really can't exist
-            if(fileZip.exists()){
-                System.out.println("BIG413 - Failed to delete " + fileZip.getName());
-                return false;
-            }
-        }
-
-        // compress the file
-        zip.compress(fileToCopy, fileZip);
-        // use the zip file as inputstream
-        inputStream = new FileInputStream(fileZip);
-        
-        byte[] buffer = new byte[8192];
-        int length;
-        // add the magic number to this file block
-        outputStream.write(magicSignature.getBytes());
-        // now copy the whole file into the BIG archive
-        while ((length = inputStream.read(buffer)) > 0) {
-            outputStream.write(buffer, 0, length);
-        }
-        // if there is something else to be flushed, do it now
-        outputStream.flush();
-        
-        
-        // calculate the base path
-        final String resultingPath = fileToCopy.getAbsolutePath().replace(basePath, "");
-        
-        // calculate the SHA1 signature
-        final String output = utils.thirdparty.Checksum.generateFileChecksum("SHA-1", fileToCopy);
-        
-        // write a new line in our index file
-        writer.write("\n" 
-                + utils.files.getPrettyFileSize(currentPosition)
-                + " "
-                + output
-                + " " 
-                + resultingPath
-        );
-        // increase the position counter
-        currentPosition += fileZip.length() + magicSignature.length();
-        
-        // delete the zip file, we don't need it anymore
-        fileZip.delete();
-        
-        
-    } catch(IOException e){
-        System.err.println("BIG346 - Error copying file: " + fileToCopy.getAbsolutePath());
-        return false;
-    }  
-    
-    finally {
-        if(inputStream != null){
-            try {
-                inputStream.close();
-            } catch (IOException ex) {
-                Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-    }
-    return true;
-}
+//    /**
+//     * Copies one file into the big archive
+//     */ 
+//    private boolean addFileOld(final File baseFolder, final File fileToCopy){
+//        
+//        // avoid files with size above our limits
+//        if(fileToCopy.length() > maxFileSize){
+//            // we reserve the false flag for exceptions
+//            return true;
+//        }
+//        
+//    // declare
+//        FileInputStream inputStream = null;
+//    try {
+//        // create the place holder for the zip file
+//        File fileZip = new File("temp.zip");
+//        // this file can't exist
+//        if(fileZip.exists()){
+//            fileZip.delete();
+//            // this file really can't exist
+//            if(fileZip.exists()){
+//                System.out.println("BIG413 - Failed to delete " + fileZip.getName());
+//                return false;
+//            }
+//        }
+//
+//        // compress the file
+//        zip.compress(fileToCopy, fileZip);
+//        // use the zip file as inputstream
+//        inputStream = new FileInputStream(fileZip);
+//        
+//        byte[] buffer = new byte[8192];
+//        int length;
+//        // add the magic number to this file block
+//        outputStream.write(magicSignature.getBytes());
+//        // now copy the whole file into the BIG archive
+//        while ((length = inputStream.read(buffer)) > 0) {
+//            outputStream.write(buffer, 0, length);
+//        }
+//        // if there is something else to be flushed, do it now
+//        outputStream.flush();
+//        
+//        
+//        // calculate the base path
+//        final String resultingPath = fileToCopy.getAbsolutePath().replace(basePath, "");
+//        
+//        // calculate the SHA1 signature
+//        final String output = utils.thirdparty.Checksum.generateFileChecksum("SHA-1", fileToCopy);
+//        
+//        // write a new line in our index file
+//        writer.write("\n" 
+//                + utils.files.getPrettyFileSize(currentPosition)
+//                + " "
+//                + output
+//                + " " 
+//                + resultingPath
+//        );
+//        // increase the position counter
+//        currentPosition += fileZip.length() + magicSignature.length();
+//        
+//        // delete the zip file, we don't need it anymore
+//        fileZip.delete();
+//        
+//        
+//    } catch(IOException e){
+//        System.err.println("BIG346 - Error copying file: " + fileToCopy.getAbsolutePath());
+//        return false;
+//    }  
+//    
+//    finally {
+//        if(inputStream != null){
+//            try {
+//                inputStream.close();
+//            } catch (IOException ex) {
+//                Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
+//            }
+//        }
+//    }
+//    return true;
+//}
 
     /**
      * Define basePath, this is useful for cases where we want to index
