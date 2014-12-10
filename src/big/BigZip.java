@@ -248,7 +248,7 @@ public class BigZip {
         // open the index files
         operationStart(fileToAdd);
         // call the iteration to go through all files
-        addFile(fileToAdd, fileToAdd); 
+        writeFile(fileToAdd); 
         // now close all the pointers
         operationEnd();
     }
@@ -257,8 +257,9 @@ public class BigZip {
     
     /**
      * Opens the BIG file and respective index
+     * @param folderToAdd
      */
-    private void operationStart(final File folderToAdd){
+    public void operationStart(final File folderToAdd){
       try {
             // if the base path is already set, don't change it
             if(basePath.isEmpty()){
@@ -337,7 +338,7 @@ public class BigZip {
     /**
      * Closes the pointers of our work files
      */
-    private void operationEnd(){
+    public void operationEnd(){
         try {
             // flush all the remaining data onto the files
             outputStream.flush();
@@ -379,7 +380,7 @@ public class BigZip {
         for (File file : files) {
             if (file.isFile()){
                 // Add the file to our archive
-                addFile(baseFolder, file);
+                addFile(file);
             }
             else
                 if ( (file.isDirectory())
@@ -394,8 +395,10 @@ public class BigZip {
      
    /**
      * Copies one file into the big archive
+     * @param fileToCopy
+     * @return 
      */ 
-    private boolean addFile(final File baseFolder, final File fileToCopy){
+    public boolean writeFile(final File fileToCopy){
         
         // declare
         ByteArrayOutputStream outputZipStream = new ByteArrayOutputStream();
@@ -409,6 +412,7 @@ public class BigZip {
         logical_zip.closeArchiveEntry();
         logical_zip.finish();
         logical_zip.flush();
+        logical_zip.close();
         
         // get the bytes
         final ByteArrayInputStream byteInput = new ByteArrayInputStream(outputZipStream.toByteArray());
@@ -444,8 +448,6 @@ public class BigZip {
         );
         // increase the position counter
         currentPosition += counter + magicSignature.length();
-        
-        
     } catch(Exception e){
         System.err.println("BIG346 - Error copying file: " + fileToCopy.getAbsolutePath());
         return false;
@@ -456,6 +458,72 @@ public class BigZip {
     return true;
 }  
      
+    /**
+     * Copies one file into the big archive
+     * @param fileToCopy
+     * @param SHA1
+     * @param rootFolder
+     * @return 
+     */ 
+    public boolean writeFileQuick(final File fileToCopy, final String SHA1,
+            final String rootFolder){
+        
+        // declare
+        ByteArrayOutputStream outputZipStream = new ByteArrayOutputStream();
+    try {
+        /* Create Archive Output Stream that attaches File Output Stream / and specifies type of compression */
+        ArchiveOutputStream logical_zip = new ArchiveStreamFactory().createArchiveOutputStream(ArchiveStreamFactory.ZIP, outputZipStream);
+        /* Create Archieve entry - write header information*/
+        logical_zip.putArchiveEntry(new ZipArchiveEntry(fileToCopy.getName()));
+        /* Copy input file */
+        IOUtils.copy(new FileInputStream(fileToCopy), logical_zip);
+        logical_zip.closeArchiveEntry();
+        logical_zip.finish();
+        logical_zip.flush();
+        logical_zip.close();
+        
+        // get the bytes
+        final ByteArrayInputStream byteInput = new ByteArrayInputStream(outputZipStream.toByteArray());
+        
+        byte[] buffer = new byte[8192];
+        int length,
+                counter = 0;
+        // add the magic number to this file block
+        outputStream.write(magicSignature.getBytes());
+        // now copy the whole file into the BIG archive
+        while ((length = byteInput.read(buffer)) > 0) {
+            outputStream.write(buffer, 0, length);
+            counter += length;
+        }
+        // if there is something else to be flushed, do it now
+        outputStream.flush();
+       
+        
+        
+        // calculate the base path
+        final String resultingPath = fileToCopy.getAbsolutePath().replace(rootFolder, "");
+        
+        // write a new line in our index file
+        writer.write("\n" 
+                + utils.files.getPrettyFileSize(currentPosition)
+                + " "
+                + SHA1
+                + " " 
+                + resultingPath
+        );
+        // increase the position counter
+        currentPosition += counter + magicSignature.length();
+    } catch(Exception e){
+        System.err.println("BIG346 - Error copying file: " + fileToCopy.getAbsolutePath());
+        return false;
+    }  
+    
+    finally {
+    }
+    return true;
+}  
+    
+    
      
 //    /**
 //     * Copies one file into the big archive
