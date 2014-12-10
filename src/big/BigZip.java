@@ -87,7 +87,11 @@ public class BigZip {
             getNextFileCounter = 0;
     
     // defines the magic number and recovery trigger for each stored file
-    private final String magicSignature = "BIG81nb";
+    private final String 
+            magicSignature = "BIG81nb",
+            tagStart = "start: ",
+            tagEnded = "ended: ";
+            
     
     private String basePath = "";
     
@@ -238,13 +242,17 @@ public class BigZip {
     /**
      * Add all files from a given folder inside our archive
      * @param fileToAdd The file we want to add
+     * @param baseFolder
      */
-    public synchronized void addFile(final File fileToAdd) {
+    public synchronized void addFile(final File fileToAdd, final String baseFolder) {
         // preflight checks
         if(isReady == false){
             System.err.println("BIG241 - Error, Archive is not ready");
             return;
         }
+        
+        basePath = baseFolder;
+        
         // open the index files
         operationStart(fileToAdd);
         // call the iteration to go through all files
@@ -254,6 +262,41 @@ public class BigZip {
     }
     
     
+    /**
+     * Opens the BIG file and respective index
+     */
+    public void quickStart(){
+      try {
+            // open the BIG file where the binary data is stored
+            currentPosition = fileMainBIG.length();
+            // open our archive file
+            outputStream = new FileOutputStream(fileMainBIG, true);
+            // open the file where we list the data, signatures and positions
+            writer = new BufferedWriter(
+                new FileWriter(fileIndexBIG, true), 8192);
+        } catch (IOException ex) {
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+  
+     /**
+     * Closes the pointers of our work files
+     */
+    public void quickEnd(){
+        try {
+            // flush all the remaining data onto the files
+            outputStream.flush();
+            writer.flush();
+            
+            // close the streams
+            outputStream.close();
+            writer.close();
+            
+        } catch (IOException ex) {
+            Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    } 
     
     /**
      * Opens the BIG file and respective index
@@ -281,6 +324,7 @@ public class BigZip {
         }
     }
     
+    
     /**
      * Checks if we have a restore point that hasn't terminated with success
      * on a previous operation. If something went wrong on the previous run,
@@ -292,7 +336,7 @@ public class BigZip {
         String lastLine = utils.files.getLastLineFast(fileLogBIG);
         // are we detecting that something went wrong?
         if((lastLine.isEmpty() == false) 
-                && (lastLine.startsWith("start:"))){
+                && (lastLine.startsWith(tagStart))){
             System.out.println("BIG290 Something went wrong last time, we need to restore the last saved point!");
             // we need to restore the last saved point
             final String snippet = lastLine.substring(lastLine.indexOf(" ")+1);
@@ -312,7 +356,7 @@ public class BigZip {
         }
         // now add a line to record what we are doing
         utils.files.addTextToFile(fileLogBIG, "\n"
-                + "start: "
+                + tagStart
                 + utils.files.getPrettyFileSize(currentPosition) 
                 + " "
                 + utils.time.getDateTimeISO()
@@ -330,7 +374,7 @@ public class BigZip {
         // prepare the keyword that we want to delete
         final String prettyNumber = utils.files.getPrettyFileSize(lastPosition);
         // cut the log file after the mentioned position
-        utils.files.cutTextFileAfter(fileLogBIG, "start: " + prettyNumber);
+        utils.files.cutTextFileAfter(fileLogBIG, tagStart + prettyNumber);
         // cut the index file after the mentioned position
         utils.files.cutTextFileAfter(fileIndexBIG, prettyNumber + " ");
    }
@@ -348,18 +392,24 @@ public class BigZip {
             outputStream.close();
             writer.close();
             
-            
-             // now add a line to record what we are doing
-            utils.files.addTextToFile(fileLogBIG, "\n"
-                + "ended: "
-                + utils.files.getPrettyFileSize(currentPosition) 
-                + " "
-                + utils.time.getDateTimeISO()
-            );
+            // now add a line to record what we are doing
+            addTagEnded();
             
         } catch (IOException ex) {
             Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    
+    /**
+     * Marks the commit of a file with success
+     */
+    private void addTagEnded(){
+        utils.files.addTextToFile(fileLogBIG, "\n"
+                + tagEnded
+                + utils.files.getPrettyFileSize(currentPosition) 
+                + " "
+                + utils.time.getDateTimeISO()
+            );
     }
     
     /**
@@ -380,7 +430,7 @@ public class BigZip {
         for (File file : files) {
             if (file.isFile()){
                 // Add the file to our archive
-                addFile(file);
+                addFile(file, file.getParentFile().getAbsolutePath());
             }
             else
                 if ( (file.isDirectory())
@@ -429,8 +479,6 @@ public class BigZip {
         }
         // if there is something else to be flushed, do it now
         outputStream.flush();
-       
-        
         
         // calculate the base path
         final String resultingPath = fileToCopy.getAbsolutePath().replace(basePath, "");
@@ -465,12 +513,14 @@ public class BigZip {
      * @param rootFolder
      * @return 
      */ 
-    public boolean writeFileQuick(final File fileToCopy, final String SHA1,
+    public boolean quickWrite(final File fileToCopy, final String SHA1,
             final String rootFolder){
-        
         // declare
         ByteArrayOutputStream outputZipStream = new ByteArrayOutputStream();
     try {
+        // save this operation on the log of commits
+        pointRestoreAndSave(fileToCopy);
+        
         /* Create Archive Output Stream that attaches File Output Stream / and specifies type of compression */
         ArchiveOutputStream logical_zip = new ArchiveStreamFactory().createArchiveOutputStream(ArchiveStreamFactory.ZIP, outputZipStream);
         /* Create Archieve entry - write header information*/
@@ -496,28 +546,30 @@ public class BigZip {
             counter += length;
         }
         // if there is something else to be flushed, do it now
-        outputStream.flush();
-       
-        
+        //outputStream.flush();
         
         // calculate the base path
         final String resultingPath = fileToCopy.getAbsolutePath().replace(rootFolder, "");
         
-        // write a new line in our index file
-        writer.write("\n" 
+        final String line = "\n" 
                 + utils.files.getPrettyFileSize(currentPosition)
                 + " "
                 + SHA1
                 + " " 
-                + resultingPath
-        );
+                + resultingPath;
+       
+        // write a new line in our index file
+        writer.write(line);
+        //writer.flush();
         // increase the position counter
         currentPosition += counter + magicSignature.length();
+        
+        // close the log with success
+        addTagEnded();
     } catch(Exception e){
         System.err.println("BIG346 - Error copying file: " + fileToCopy.getAbsolutePath());
         return false;
     }  
-    
     finally {
     }
     return true;
