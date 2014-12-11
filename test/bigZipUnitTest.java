@@ -12,6 +12,7 @@
 
 import big.BigZip;
 import java.io.File;
+import java.io.IOException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -73,7 +74,7 @@ public class bigZipUnitTest {
     }
 
     @Test
-    public void testAddingSingleFile() {
+    public void testAddingSingleFile() throws IOException {
         System.out.println("[TEST] Adding a single file");
         System.out.println("Source: " + fileSingle.getAbsolutePath());
         
@@ -111,7 +112,8 @@ public class bigZipUnitTest {
         
         db.quickStart();
         // operation of adding a single file
-        db.quickWrite(fileSingle, SHA1, fileSingle.getParentFile().getAbsolutePath());
+        db.quickWrite(fileSingle, SHA1, 
+                fileSingle.getAbsolutePath());
         db.quickEnd();
         
         // test the contents of the log files
