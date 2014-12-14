@@ -182,11 +182,7 @@ public class BigZip {
     private boolean existOrTouch(final File file, final String designation){
         // first check for the folder
         File folder = file.getParentFile();
-        // do we have a folder defined?
-//        if(folder == null){
-//            folder = new File(".");
-//        }
-        
+
         // does it exist?
         if(folder.exists() == false){
             // then create one
