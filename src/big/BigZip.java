@@ -47,6 +47,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
@@ -161,7 +162,7 @@ public class BigZip {
         if(silent == false){
             System.out.println(message);
         }
-        // alld done
+        // all done
         isReady = true;
     }
 
@@ -458,14 +459,13 @@ public class BigZip {
             return;
         }
         // go through each file
-        for (File file : files) {
+        for (final File file : files) {
             if (file.isFile()){
                 // Add the file to our archive
                 addFile(file, file.getParentFile().getAbsolutePath());
             }
             else
-                if ( (file.isDirectory())
-                        &&( maxDeep-1 > 0 ) ){
+                if ( maxDeep-1 > 0 ){
                     // do the recursive crawling
                     addFiles(baseFolder, file, maxDeep-1);
                 }
@@ -515,7 +515,7 @@ public class BigZip {
         final String resultingPath = fileToCopy.getAbsolutePath().replace(basePath, "");
         
         // calculate the SHA1 signature
-        final String output = utils.thirdparty.Checksum.generateFileChecksum("SHA-1", fileToCopy);
+        final String output = utils.hashing.Checksum.generateFileChecksum("SHA-1", fileToCopy);
         
         // write a new line in our index file
         writerFileIndex.write("\n" 
@@ -599,7 +599,87 @@ public class BigZip {
         // close the log with success
         addTagEnded();
     } catch(Exception e){
-        System.err.println("BIG346 - Error copying file: " + fileToCopy.getAbsolutePath());
+        System.err.println("BIG600 - Error copying file: " + fileToCopy.getAbsolutePath());
+        return false;
+    }  
+    finally {
+    }
+    return true;
+}  
+    
+    /**
+     * Copies one file into the big archive
+     * @param textToCopy
+     * @param SHA1
+     * @param filePathToWriteInTextLine
+     * @return 
+     */ 
+    public boolean quickWrite(final String textToCopy, final String SHA1,
+            final String filePathToWriteInTextLine){
+        return quickWriteGenericStream(new ByteArrayInputStream(textToCopy.getBytes()), SHA1, filePathToWriteInTextLine);
+    }  
+    
+   
+   
+    /**
+     * Copies one file into the big archive
+     * @param stream
+     * @param SHA1
+     * @param filePathToWriteInTextLine
+     * @return 
+     */ 
+    public boolean quickWriteGenericStream(final InputStream stream, final String SHA1,
+            final String filePathToWriteInTextLine){
+        // declare
+        ByteArrayOutputStream outputZipStream = new ByteArrayOutputStream();
+    try {
+        // save this operation on the log of commits
+        addTagStarted(filePathToWriteInTextLine);
+        //pointRestoreAndSave(fileToCopy);
+        
+        /* Create Archive Output Stream that attaches File Output Stream / and specifies type of compression */
+        ArchiveOutputStream logical_zip = new ArchiveStreamFactory().createArchiveOutputStream(ArchiveStreamFactory.ZIP, outputZipStream);
+        /* Create Archieve entry - write header information*/
+        logical_zip.putArchiveEntry(new ZipArchiveEntry(filePathToWriteInTextLine));
+        /* Copy input file */
+        
+        IOUtils.copy(stream, logical_zip);
+        logical_zip.closeArchiveEntry();
+        logical_zip.finish();
+        logical_zip.flush();
+        logical_zip.close();
+        
+        // get the bytes
+        final ByteArrayInputStream byteInput = new ByteArrayInputStream(outputZipStream.toByteArray());
+        
+        byte[] buffer = new byte[8192];
+        int length,
+                counter = 0;
+        // add the magic number to this file block
+        outputStream.write(magicSignature.getBytes());
+        // now copy the whole file into the BIG archive
+        while ((length = byteInput.read(buffer)) > 0) {
+            outputStream.write(buffer, 0, length);
+            counter += length;
+        }
+       
+        final String line = "\n" 
+                + utils.files.getPrettyFileSize(currentPosition)
+                + " "
+                + SHA1
+                + " " 
+                + filePathToWriteInTextLine;
+       
+        // write a new line in our index file
+        writerFileIndex.write(line);
+        //writer.flush();
+        // increase the position counter
+        currentPosition += counter + magicSignature.length();
+        
+        // close the log with success
+        addTagEnded();
+    } catch(Exception e){
+        System.err.println("BIG600 - Error copying file: " + filePathToWriteInTextLine);
         return false;
     }  
     finally {
@@ -716,7 +796,7 @@ public class BigZip {
         }
         // now extract the mentioned bytes from our BIG archive
         boolean result = extractBytes(targetFile, coordinates[0], coordinates[1]);
-        System.out.println("BIG 489: Grabbing file from "
+        System.out.println("BIG 799: Grabbing file from "
             + coordinates[0]
             + " to "
             + coordinates[1]
@@ -725,6 +805,24 @@ public class BigZip {
         return result;
     }
     
+    
+    /**
+     * Extracts a file from the archive based on its file path/name information
+     * @param fileToExtract
+     * @return null if not found, otherwise it contains the file data
+     */
+    public String getFileAsText(final String fileToExtract){
+        // get the line where the file is located on our index
+        long[] coordinates = getFileCoordinates(fileIndexBIG, fileToExtract);
+        // did we found something?
+        if(coordinates == null){
+            return null;
+        }
+        // now extract the mentioned bytes from our BIG archive
+        String result = extractBytesToRAM(coordinates[0], coordinates[1]);
+        // all done
+        return result;
+    }
     
     /**
      * Given a position inside our knowledge base, retrieve the data up to

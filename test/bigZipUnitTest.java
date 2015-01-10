@@ -30,14 +30,13 @@ public class bigZipUnitTest {
     static BigZip db;
     
     File 
-            folderWithFiles = utils.files.getCanonicalFile(new File("../lib")),
-            fileSingle = utils.files.getCanonicalFile(new File("../LICENSE")),
+        folderWithFiles = utils.files.getCanonicalFile(new File("../lib")),
+        fileSingle = utils.files.getCanonicalFile(new File("../LICENSE")),
 
-            fileZip = new File(folderTest, "zipTest.big"),
-            fileZipLog = new File(folderTest, "zipTest.big-log"),
-            fileZipIndex = new File(folderTest, "zipTest.big-index")
-            ;
-
+        fileZip = new File(folderTest, "zipTest.big"),
+        fileZipLog = new File(folderTest, "zipTest.big-log"),
+        fileZipIndex = new File(folderTest, "zipTest.big-index")
+        ;
     
     public bigZipUnitTest() {
     }
@@ -47,13 +46,11 @@ public class bigZipUnitTest {
         System.out.println("[START] Starting tests");
         System.out.println("Creating the test folder: " + folderTest.getAbsolutePath());
         utils.files.mkdirs(folderTest);
-        System.out.println();
     }
     
     @AfterClass
     public static void tearDownClass() {
-        System.out.println("\n[DONE] Finished tests");
-        
+        System.out.println("[DONE] Finished tests");
     }
     
     @Before
@@ -63,22 +60,66 @@ public class bigZipUnitTest {
         // create the new folder
         utils.files.mkdirs(folderTest);
         db = new BigZip(fileZip);
-        
     }
     
     @After
     public void tearDown() {
         db.close();
-        utils.files.deleteDir(folderTest);
+        //utils.files.deleteDir(folderTest);
     }
 
+//    @Test
+//    public void testAddingSingleFile() throws IOException {
+//        System.out.println("[TEST] Adding a single file");
+//        System.out.println("Source: " + fileSingle.getAbsolutePath());
+//        
+//        // operation of adding a single file
+//        db.addFile(fileSingle, fileSingle.getParentFile().getAbsolutePath());
+//        
+//        // test the contents of the log files
+//        final String contentIndex = utils.files.readAsString(fileZipLog);
+//        assert(contentIndex.contains(fileSingle.getName()));
+//        assert(contentIndex.contains("start: 00000"));
+//        assert(contentIndex.contains("ended: 00000"));
+//        
+//        // test the data file
+//        final String contentZip = utils.files.readAsString(fileZip);
+//        assert(contentZip.contains("BIG81nbPK"));
+//        assert(contentZip.contains(fileSingle.getName()));
+//        
+//        // test the data file
+//        final String contentZipIndex = utils.files.readAsString(fileZipIndex);
+//        assert(contentZipIndex.contains("000000000000000"));
+//        assert(contentZipIndex.contains(fileSingle.getName()));
+//       
+//        System.out.println("\n\n");
+//    }
+//
     @Test
-    public void testAddingSingleFile() throws IOException {
-        System.out.println("[TEST] Adding a single file");
+    public void testAddingSingleFileQuick() throws IOException{
+        System.out.println("[TEST] Quickly adding a single file");
         System.out.println("Source: " + fileSingle.getAbsolutePath());
         
-        // operation of adding a single file
-        db.addFile(fileSingle, fileSingle.getParentFile().getAbsolutePath());
+        // calculate the SHA1 signature
+        final String SHA1 = 
+                utils.hashing.Checksum.generateFileChecksum("SHA-1", fileSingle);
+        
+        
+        db.quickStart();
+        
+        // add some files for our testing purposes
+        for(final File file : new File("..").listFiles()){
+            if(file.isDirectory()){
+                continue;
+            }
+            final String hash = 
+                utils.hashing.Checksum.generateFileChecksum("SHA-1", file);
+            final String path = "./" + file.getName();
+            db.quickWrite(file, hash, path);
+        }
+        
+        
+        db.quickEnd();
         
         // test the contents of the log files
         final String contentIndex = utils.files.readAsString(fileZipLog);
@@ -95,23 +136,34 @@ public class bigZipUnitTest {
         final String contentZipIndex = utils.files.readAsString(fileZipIndex);
         assert(contentZipIndex.contains("000000000000000"));
         assert(contentZipIndex.contains(fileSingle.getName()));
-       
-        System.out.println("\n\n");
+        
+        // was a file added with contents recovered?
+        String content = db.extractBytesToRAM(0);
+        assert(content.isEmpty() == false);
+        
+        // find the license file, verify if it was decompressed correctly
+        content = db.getFileAsText("./LICENSE");
+        System.out.println("Testing content extraction");
+        assert(content.contains("The original code"));
+        
     }
-
+    
+    
     @Test
-    public void testAddingSingleFileQuick(){
-        System.out.println("[TEST] Quickly adding a single file");
+    public void testAddingSingleFileQuickString(){
+        System.out.println("[TEST] Quickly adding a single text");
         System.out.println("Source: " + fileSingle.getAbsolutePath());
         
         // calculate the SHA1 signature
         final String SHA1 = 
-                utils.thirdparty.Checksum.generateFileChecksum("SHA-1", fileSingle);
+                utils.hashing.Checksum.generateFileChecksum("SHA-1", fileSingle);
         
+        
+        final String content = utils.files.readAsString(fileSingle);
         
         db.quickStart();
         // operation of adding a single file
-        db.quickWrite(fileSingle, SHA1, 
+        db.quickWrite(content, SHA1, 
                 fileSingle.getAbsolutePath());
         db.quickEnd();
         
@@ -131,5 +183,6 @@ public class bigZipUnitTest {
         assert(contentZipIndex.contains("000000000000000"));
         assert(contentZipIndex.contains(fileSingle.getName()));
     }
+    
     
 }
