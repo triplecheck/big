@@ -13,19 +13,19 @@
 package tools;
 
 import java.io.File;
-import utils.model.FileReadLines;
+import utils.ReadWrite.FileReadLinesBatch;
 
 /**
  *
  * @author Nuno Brito, 11th of November 2014 in Darmstadt, Germany
  */
-public class sanitize extends FileReadLines{
+public class sanitize extends FileReadLinesBatch{
 
     // settings
     static private final String fileLocationBig = "../../kb/storage/Java.big-index";
     
     // internal variables
-    FileReadLines fileRead;
+    FileReadLinesBatch fileRead;
 
     public sanitize(File textFileTarget) {
         super(textFileTarget);

@@ -50,6 +50,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -433,6 +434,7 @@ public class BigZip {
     
     /**
      * Marks the commit of a file with success
+     * @throws java.io.IOException
      */
     private void addTagEnded() throws IOException{
         final String line = "\n"
@@ -613,9 +615,10 @@ public class BigZip {
      * @param SHA1
      * @param filePathToWriteInTextLine
      * @return 
+     * @throws java.io.IOException 
      */ 
     public boolean quickWrite(final String textToCopy, final String SHA1,
-            final String filePathToWriteInTextLine){
+            final String filePathToWriteInTextLine) throws IOException{
         return quickWriteGenericStream(new ByteArrayInputStream(textToCopy.getBytes()), SHA1, filePathToWriteInTextLine);
     }  
     
@@ -627,30 +630,33 @@ public class BigZip {
      * @param SHA1
      * @param filePathToWriteInTextLine
      * @return 
+     * @throws java.io.IOException 
      */ 
     public boolean quickWriteGenericStream(final InputStream stream, final String SHA1,
-            final String filePathToWriteInTextLine){
+            final String filePathToWriteInTextLine) throws IOException{
         // declare
         ByteArrayOutputStream outputZipStream = new ByteArrayOutputStream();
+        ByteArrayInputStream byteInput = null;
     try {
         // save this operation on the log of commits
         addTagStarted(filePathToWriteInTextLine);
-        //pointRestoreAndSave(fileToCopy);
-        
-        /* Create Archive Output Stream that attaches File Output Stream / and specifies type of compression */
-        ArchiveOutputStream logical_zip = new ArchiveStreamFactory().createArchiveOutputStream(ArchiveStreamFactory.ZIP, outputZipStream);
-        /* Create Archieve entry - write header information*/
-        logical_zip.putArchiveEntry(new ZipArchiveEntry(filePathToWriteInTextLine));
-        /* Copy input file */
+        // Create Archive Output Stream that attaches File Output Stream / and specifies type of compression
+        ArchiveOutputStream logical_zip = new ArchiveStreamFactory()
+                .createArchiveOutputStream(ArchiveStreamFactory.ZIP, outputZipStream);
+        // Create Archive entry - write header information
+        ZipArchiveEntry zipArchiveEntry = new ZipArchiveEntry(filePathToWriteInTextLine);
+        logical_zip.putArchiveEntry(zipArchiveEntry);
+        // Copy input file
         
         IOUtils.copy(stream, logical_zip);
+        
         logical_zip.closeArchiveEntry();
         logical_zip.finish();
         logical_zip.flush();
         logical_zip.close();
         
         // get the bytes
-        final ByteArrayInputStream byteInput = new ByteArrayInputStream(outputZipStream.toByteArray());
+        byteInput = new ByteArrayInputStream(outputZipStream.toByteArray());
         
         byte[] buffer = new byte[8192];
         int length,
@@ -683,93 +689,92 @@ public class BigZip {
         return false;
     }  
     finally {
-    }
-    return true;
-}  
-    
-    
-     
-//    /**
-//     * Copies one file into the big archive
-//     */ 
-//    private boolean addFileOld(final File baseFolder, final File fileToCopy){
-//        
-//        // avoid files with size above our limits
-//        if(fileToCopy.length() > maxFileSize){
-//            // we reserve the false flag for exceptions
-//            return true;
-//        }
-//        
-//    // declare
-//        FileInputStream inputStream = null;
-//    try {
-//        // create the place holder for the zip file
-//        File fileZip = new File("temp.zip");
-//        // this file can't exist
-//        if(fileZip.exists()){
-//            fileZip.delete();
-//            // this file really can't exist
-//            if(fileZip.exists()){
-//                System.out.println("BIG413 - Failed to delete " + fileZip.getName());
-//                return false;
-//            }
-//        }
-//
-//        // compress the file
-//        zip.compress(fileToCopy, fileZip);
-//        // use the zip file as inputstream
-//        inputStream = new FileInputStream(fileZip);
-//        
-//        byte[] buffer = new byte[8192];
-//        int length;
-//        // add the magic number to this file block
-//        outputStream.write(magicSignature.getBytes());
-//        // now copy the whole file into the BIG archive
-//        while ((length = inputStream.read(buffer)) > 0) {
-//            outputStream.write(buffer, 0, length);
-//        }
-//        // if there is something else to be flushed, do it now
-//        outputStream.flush();
-//        
-//        
-//        // calculate the base path
-//        final String resultingPath = fileToCopy.getAbsolutePath().replace(basePath, "");
-//        
-//        // calculate the SHA1 signature
-//        final String output = utils.thirdparty.Checksum.generateFileChecksum("SHA-1", fileToCopy);
-//        
-//        // write a new line in our index file
-//        writer.write("\n" 
-//                + utils.files.getPrettyFileSize(currentPosition)
-//                + " "
-//                + output
-//                + " " 
-//                + resultingPath
-//        );
-//        // increase the position counter
-//        currentPosition += fileZip.length() + magicSignature.length();
-//        
-//        // delete the zip file, we don't need it anymore
-//        fileZip.delete();
-//        
-//        
-//    } catch(IOException e){
-//        System.err.println("BIG346 - Error copying file: " + fileToCopy.getAbsolutePath());
-//        return false;
-//    }  
-//    
-//    finally {
-//        if(inputStream != null){
-//            try {
-//                inputStream.close();
-//            } catch (IOException ex) {
-//                Logger.getLogger(BigZip.class.getName()).log(Level.SEVERE, null, ex);
-//            }
-//        }
-//    }
-//    return true;
-//}
+            if(byteInput!= null){
+                byteInput.close();
+            }
+            stream.close();
+            outputZipStream.close();
+            outputStream.close();
+        }
+        return true;
+    }  
 
+    /**
+     * Requires an InputStream, it will calculate the SHA1 checksum at the same
+     * time that it writes data onto the big file. The input stream is expected
+     * to be closed outside of this method.
+     * @param stream
+     * @param filePathToWriteInTextLine
+     * @throws java.io.IOException 
+     */ 
+    public void quickWriteStreamStandalone(final InputStream stream,
+            final String filePathToWriteInTextLine) throws Exception{
+        // declare
+        ByteArrayOutputStream outputZipStream = new ByteArrayOutputStream();
+        ByteArrayInputStream byteInput = null;
+    
+        // save this operation on the log of commits
+        addTagStarted(filePathToWriteInTextLine);
+        // Create Archive Output Stream that attaches File Output Stream / and specifies type of compression
+        ArchiveOutputStream logical_zip = new ArchiveStreamFactory()
+                .createArchiveOutputStream(ArchiveStreamFactory.ZIP, outputZipStream);
+        // Create Archive entry - write header information
+        ZipArchiveEntry zipArchiveEntry = new ZipArchiveEntry(filePathToWriteInTextLine);
+        logical_zip.putArchiveEntry(zipArchiveEntry);
+        // prepare the SHA1 signature generation
+        final MessageDigest hash = MessageDigest.getInstance("SHA1");
+        
+        // Copy input file
+        byte[] buffer = new byte[16384];
+        int length;
+       
+        while ((length = stream.read(buffer)) > 0) {
+            logical_zip.write(buffer, 0, length);
+            hash.update(buffer, 0, length);
+        }
+        
+        logical_zip.closeArchiveEntry();
+        logical_zip.finish();
+        logical_zip.flush();
+        logical_zip.close();
+        logical_zip = null;
+        
+        // get the bytes
+        byteInput = new ByteArrayInputStream(outputZipStream.toByteArray());
+        int counter = 0;
+        // add the magic number to this file block
+        outputStream.write(magicSignature.getBytes());
+        // now copy the whole file into the BIG archive
+        while ((length = byteInput.read(buffer)) > 0) {
+            outputStream.write(buffer, 0, length);
+            counter += length;
+        }
+        
+        // compute the file signature
+        byte[] digest = hash.digest();
+        final String SHA1 = utils.hashing.Checksum.convertHash(digest);
+       
+        final String line = "\n"
+                .concat( utils.files.getPrettyFileSize(currentPosition) )
+                .concat( " " )
+                .concat( SHA1)
+                .concat( " " )
+                .concat( filePathToWriteInTextLine);
+       
+        // write a new line in our index file
+        writerFileIndex.write(line);
+        //writer.flush();
+        // increase the position counter
+        currentPosition += counter + magicSignature.length();
+        
+        // close the log with success
+        addTagEnded();
+
+        // close the streams that were created
+        byteInput.close();
+        outputZipStream.close();
+    }  
+    
     /**
      * Define basePath, this is useful for cases where we want to index
      * files with several sublevels of folders to preserve URL information.
@@ -917,7 +922,6 @@ public class BigZip {
             // create a byte array
             ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
 
-            //= new ByteArrayInputStream();
             // now we start reading bytes during the mentioned interval
             while(dataBIG.getFilePointer() < endPosition){
                 // read a byte from our BIG archive
