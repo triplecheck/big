@@ -355,6 +355,7 @@ public class BigZip {
             
             // try to return our knowledge base to the previous state
             utils.files.changeSize(fileMainBIG, lastPosition);
+            // was the size change successful?
             if(lastPosition != fileMainBIG.length()){
                 System.out.println("BIG197 - Failed to restore last saved point");
                 System.exit(-1);
@@ -712,9 +713,6 @@ public class BigZip {
         // declare
         ByteArrayOutputStream outputZipStream = new ByteArrayOutputStream();
         ByteArrayInputStream byteInput = null;
-    
-        // save this operation on the log of commits
-        addTagStarted(filePathToWriteInTextLine);
         // Create Archive Output Stream that attaches File Output Stream / and specifies type of compression
         ArchiveOutputStream logical_zip = new ArchiveStreamFactory()
                 .createArchiveOutputStream(ArchiveStreamFactory.ZIP, outputZipStream);
@@ -728,20 +726,36 @@ public class BigZip {
         byte[] buffer = new byte[16384];
         int length;
        
+        // decompress from the original zip file, compress to our zip format
+        // calculate the SHA1 signature on the same loop to save resource
         while ((length = stream.read(buffer)) > 0) {
             logical_zip.write(buffer, 0, length);
             hash.update(buffer, 0, length);
         }
         
+        // compute the file signature
+        byte[] digest = hash.digest();
+        final String SHA1 = utils.hashing.Checksum.convertHash(digest);
+           
+        // close the zip related objects
         logical_zip.closeArchiveEntry();
         logical_zip.finish();
         logical_zip.flush();
         logical_zip.close();
         logical_zip = null;
         
+        // define the line that will be written on the index file
+        final String line = "\n"
+                .concat( utils.files.getPrettyFileSize(currentPosition) )
+                .concat( " " )
+                .concat( SHA1)
+                .concat( " " )
+                .concat( filePathToWriteInTextLine);
+        
         // get the bytes
         byteInput = new ByteArrayInputStream(outputZipStream.toByteArray());
         int counter = 0;
+        
         // add the magic number to this file block
         outputStream.write(magicSignature.getBytes());
         // now copy the whole file into the BIG archive
@@ -749,27 +763,10 @@ public class BigZip {
             outputStream.write(buffer, 0, length);
             counter += length;
         }
-        
-        // compute the file signature
-        byte[] digest = hash.digest();
-        final String SHA1 = utils.hashing.Checksum.convertHash(digest);
-       
-        final String line = "\n"
-                .concat( utils.files.getPrettyFileSize(currentPosition) )
-                .concat( " " )
-                .concat( SHA1)
-                .concat( " " )
-                .concat( filePathToWriteInTextLine);
-       
         // write a new line in our index file
         writerFileIndex.write(line);
-        //writer.flush();
         // increase the position counter
         currentPosition += counter + magicSignature.length();
-        
-        // close the log with success
-        addTagEnded();
-
         // close the streams that were created
         byteInput.close();
         outputZipStream.close();
