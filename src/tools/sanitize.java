@@ -13,7 +13,7 @@
 package tools;
 
 import java.io.File;
-import utils.ReadWrite.FileReadLinesBatch;
+import utils.ReadWrite.deprecated.FileReadLinesBatch;
 
 /**
  *
