@@ -518,7 +518,7 @@ public class BigZip {
         final String resultingPath = fileToCopy.getAbsolutePath().replace(basePath, "");
         
         // calculate the SHA1 signature
-        final String output = utils.hashing.Checksum.generateFileChecksum("SHA-1", fileToCopy);
+        final String output = utils.hashing.checksum.generateFileChecksum("SHA-1", fileToCopy);
         
         // write a new line in our index file
         writerFileIndex.write("\n" 
@@ -735,7 +735,7 @@ public class BigZip {
         
         // compute the file signature
         byte[] digest = hash.digest();
-        final String SHA1 = utils.hashing.Checksum.convertHash(digest);
+        final String SHA1 = utils.hashing.checksum.convertHash(digest);
            
         // close the zip related objects
         logical_zip.closeArchiveEntry();

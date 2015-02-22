@@ -108,7 +108,7 @@ public class bigZipUnitTest {
                 continue;
             }
             final String hash = 
-                utils.hashing.Checksum.generateFileChecksum("SHA-1", file);
+                utils.hashing.checksum.generateFileChecksum("SHA-1", file);
             final String path = "./" + file.getName();
             db.quickWrite(file, hash, path);
         }
@@ -151,7 +151,7 @@ public class bigZipUnitTest {
         
         // calculate the SHA1 signature
         final String SHA1 = 
-                utils.hashing.Checksum.generateFileChecksum("SHA-1", fileSingle);
+                utils.hashing.checksum.generateFileChecksum("SHA-1", fileSingle);
         
         
         final String content = utils.files.readAsString(fileSingle);
